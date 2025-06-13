@@ -19,7 +19,8 @@ import {
   ArrowUpRight,
   Download,
   Clock,
-  ChevronRight
+  ChevronRight,
+  Upload
 } from 'lucide-react'
 import { format } from 'date-fns'
 import ReactMarkdown from 'react-markdown'
@@ -83,8 +84,8 @@ export default function DealDetail({ deal }: DealDetailProps) {
   }
 
   const avgScore = () => {
-    const scores = [deal.thesis_fit_score, deal.market_score, deal.team_score, deal.product_score].filter(Boolean)
-    return scores.length > 0 ? scores.reduce((a, b) => a! + b!, 0) / scores.length : null
+    const scores = [deal.thesis_fit_score, deal.market_score, deal.team_score, deal.product_score].filter(Boolean) as number[]
+    return scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null
   }
 
   return (
@@ -104,16 +105,10 @@ export default function DealDetail({ deal }: DealDetailProps) {
                   <Badge className={stageConfig[deal.stage].color}>
                     {stageConfig[deal.stage].name}
                   </Badge>
-                  {deal.company.industry && (
+                  {deal.company.location && (
                     <Badge variant="outline">
                       <Globe className="w-3 h-3 mr-1" />
-                      {deal.company.industry}
-                    </Badge>
-                  )}
-                  {deal.company.funding_stage && (
-                    <Badge variant="outline">
-                      <TrendingUp className="w-3 h-3 mr-1" />
-                      {deal.company.funding_stage}
+                      {deal.company.location}
                     </Badge>
                   )}
                 </div>
@@ -304,22 +299,13 @@ export default function DealDetail({ deal }: DealDetailProps) {
                     <span className="text-sm">{deal.company.location}</span>
                   </div>
                 )}
-                {deal.company.founded && (
+                {deal.company.founded_date && (
                   <div className="flex items-start justify-between">
                     <div className="flex items-center text-sm">
                       <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
                       <span className="text-muted-foreground">Founded</span>
                     </div>
-                    <span className="text-sm">{deal.company.founded}</span>
-                  </div>
-                )}
-                {deal.company.team_size && (
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center text-sm">
-                      <Users className="w-4 h-4 mr-2 text-muted-foreground" />
-                      <span className="text-muted-foreground">Team Size</span>
-                    </div>
-                    <span className="text-sm">{deal.company.team_size} people</span>
+                    <span className="text-sm">{deal.company.founded_date}</span>
                   </div>
                 )}
               </CardContent>
@@ -429,7 +415,7 @@ export default function DealDetail({ deal }: DealDetailProps) {
                             <span className="text-sm text-muted-foreground">
                               {format(new Date(memo.created_at), 'MMM d, yyyy')}
                             </span>
-                            <Badge variant={memo.status === 'final' ? 'success' : 'secondary'}>
+                            <Badge variant={memo.status === 'completed' ? 'success' : 'secondary'}>
                               {memo.status}
                             </Badge>
                           </div>

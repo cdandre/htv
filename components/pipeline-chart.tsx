@@ -67,7 +67,7 @@ export default function PipelineChart({ deals }: PipelineChartProps) {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Total Active</p>
-              <p className="text-xl sm:text-2xl font-bold">{deals.filter(d => d.stage !== 'closed' && d.stage !== 'passed').length}</p>
+              <p className="text-xl sm:text-2xl font-bold">{deals.filter(d => d.stage !== 'closed').length}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Conversion Rate</p>

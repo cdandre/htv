@@ -42,7 +42,7 @@ export default function DealPipeline({ deals }: DealPipelineProps) {
     const term = searchTerm.toLowerCase()
     return (
       deal.company.name.toLowerCase().includes(term) ||
-      deal.company.industry?.toLowerCase().includes(term) ||
+      deal.company.location?.toLowerCase().includes(term) ||
       deal.analyst?.full_name?.toLowerCase().includes(term)
     )
   })
@@ -168,10 +168,10 @@ export default function DealPipeline({ deals }: DealPipelineProps) {
                                 {deal.company.name}
                               </h4>
                               <div className="flex items-center gap-2 mt-1">
-                                {deal.company.industry && (
+                                {deal.company.location && (
                                   <Badge variant="outline" className="text-xs">
                                     <Globe className="w-3 h-3 mr-1" />
-                                    {deal.company.industry}
+                                    {deal.company.location}
                                   </Badge>
                                 )}
                                 {stage && (
@@ -210,16 +210,10 @@ export default function DealPipeline({ deals }: DealPipelineProps) {
                             <span className="sm:hidden">{new Date(deal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                           </div>
                           
-                          {deal.company.funding_stage && (
-                            <div className="flex items-center text-muted-foreground">
-                              <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
-                              <span className="truncate">{deal.company.funding_stage}</span>
-                            </div>
-                          )}
                         </div>
                         
                         {/* Scores */}
-                        {(deal.thesis_fit_score || deal.team_score || deal.market_score || deal.traction_score) && (
+                        {(deal.thesis_fit_score || deal.team_score || deal.market_score || deal.product_score) && (
                           <div className="space-y-2">
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                               {deal.thesis_fit_score && (
@@ -267,16 +261,16 @@ export default function DealPipeline({ deals }: DealPipelineProps) {
                                 </div>
                               )}
                               
-                              {deal.traction_score && (
+                              {deal.product_score && (
                                 <div>
                                   <div className="flex items-center justify-between mb-1">
-                                    <span className="text-xs text-muted-foreground">Traction</span>
-                                    <span className="text-xs font-medium">{deal.traction_score}/10</span>
+                                    <span className="text-xs text-muted-foreground">Product</span>
+                                    <span className="text-xs font-medium">{deal.product_score}/10</span>
                                   </div>
                                   <div className="h-2 bg-secondary rounded-full overflow-hidden">
                                     <div 
-                                      className={`h-full transition-all duration-500 ${getScoreColor(deal.traction_score)}`}
-                                      style={{ width: `${deal.traction_score * 10}%` }}
+                                      className={`h-full transition-all duration-500 ${getScoreColor(deal.product_score)}`}
+                                      style={{ width: `${deal.product_score * 10}%` }}
                                     />
                                   </div>
                                 </div>

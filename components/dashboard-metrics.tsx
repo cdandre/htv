@@ -13,7 +13,7 @@ interface DashboardMetricsProps {
 }
 
 export default function DashboardMetrics({ deals }: DashboardMetricsProps) {
-  const activeDeals = deals.filter(d => d.stage !== 'closed' && d.stage !== 'passed')
+  const activeDeals = deals.filter(d => d.stage !== 'closed')
   const closedDeals = deals.filter(d => d.stage === 'closed')
   
   const totalPortfolioValue = closedDeals.reduce((sum, deal) => {

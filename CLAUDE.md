@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Important Instructions
+
+### Always Use Context7 for Latest Documentation
+When working with any libraries or frameworks in this project, ALWAYS use Context7 to fetch the latest documentation and API references. This ensures you're using the most up-to-date patterns and avoiding deprecated APIs.
+
+To use Context7:
+1. First call `mcp__Context7__resolve-library-id` with the library name
+2. Then call `mcp__Context7__get-library-docs` with the resolved ID and relevant topics
+
+This is especially important for:
+- Supabase APIs (@supabase/ssr, @supabase/supabase-js)
+- Next.js 14 patterns and APIs
+- React 18+ features
+- Any third-party libraries when implementing new features or debugging
+
 ## Project Overview
 
 HTV VC Operating System - A Next.js 14 application for venture capital deal flow management with AI-powered analysis and document processing.

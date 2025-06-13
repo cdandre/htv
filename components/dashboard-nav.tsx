@@ -43,8 +43,8 @@ export default function DashboardNav({ user }: DashboardNavProps) {
             {/* Logo */}
             <div className="flex-shrink-0 flex items-center">
               <Link href="/dashboard" className="flex items-center space-x-4">
-                <HTVLogo className="h-7 w-auto" />
-                <div className="hidden sm:block border-l border-gray-300 dark:border-gray-700 pl-4">
+                <HTVLogo className="h-10 w-auto" />
+                <div className="hidden md:block border-l border-gray-300 dark:border-gray-700 pl-4">
                   <span className="text-[10px] uppercase tracking-widest text-gray-600 dark:text-gray-400">
                     Building the Future of Home
                   </span>

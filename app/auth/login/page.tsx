@@ -40,8 +40,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
       <div className="max-w-md w-full space-y-8 px-8">
         <div className="text-center">
-          <div className="flex justify-center mb-6">
-            <HTVLogo className="h-10 w-auto" />
+          <div className="flex justify-center mb-8">
+            <HTVLogo className="h-12 w-auto" />
           </div>
           <h2 className="heading-2 text-black dark:text-white">
             Welcome Back

@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, FileText } from 'lucide-react'
+import { Upload, FileText, Cloud } from 'lucide-react'
 
 interface FileUploadProps {
   onFilesSelected: (files: File[]) => void
@@ -47,27 +47,46 @@ export default function FileUpload({
   return (
     <div
       {...getRootProps()}
-      className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+      className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
         isDragActive
-          ? 'border-blue-400 bg-blue-50'
-          : 'border-gray-300 hover:border-gray-400'
+          ? 'border-primary bg-primary/5 scale-[1.02]'
+          : 'border-border hover:border-primary/50 hover:bg-accent/50'
       }`}
     >
       <input {...getInputProps()} />
       {isDragActive ? (
-        <div>
-          <Upload className="mx-auto h-12 w-12 text-blue-400" />
-          <p className="mt-2 text-sm text-blue-600">Drop the files here...</p>
+        <div className="space-y-3">
+          <div className="w-20 h-20 mx-auto bg-primary/10 rounded-full flex items-center justify-center animate-pulse">
+            <Cloud className="h-10 w-10 text-primary" />
+          </div>
+          <div>
+            <p className="text-lg font-medium text-primary">Drop your files here</p>
+            <p className="text-sm text-muted-foreground mt-1">Release to upload</p>
+          </div>
         </div>
       ) : (
-        <div>
-          <FileText className="mx-auto h-12 w-12 text-gray-400" />
-          <p className="mt-2 text-sm text-gray-600">
-            Drag and drop files here, or click to select
-          </p>
-          <p className="mt-1 text-xs text-gray-500">
-            Supports PDF, Word, PowerPoint, and Excel files up to {maxSize / 1024 / 1024}MB
-          </p>
+        <div className="space-y-4">
+          <div className="w-20 h-20 mx-auto bg-muted rounded-full flex items-center justify-center">
+            <Upload className="h-10 w-10 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-lg font-medium">
+              Drop files here or click to browse
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Supports PDF, Word, PowerPoint, and Excel files
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Maximum file size: {maxSize / 1024 / 1024}MB
+            </p>
+          </div>
+          <button
+            type="button"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Select Files
+          </button>
         </div>
       )}
     </div>

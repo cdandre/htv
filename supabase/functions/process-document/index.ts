@@ -91,7 +91,7 @@ serve(async (req) => {
     for (let i = 0; i < chunks.length; i++) {
       const embeddingResponse = await openai.embeddings.create({
         input: chunks[i],
-        model: 'text-embedding-3-large',
+        model: 'text-embedding-3-small',
       })
       
       const embedding = embeddingResponse.data[0].embedding

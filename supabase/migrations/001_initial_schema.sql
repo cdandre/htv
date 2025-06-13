@@ -108,7 +108,7 @@ CREATE TABLE document_chunks (
     document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     chunk_index INTEGER NOT NULL,
     content TEXT NOT NULL,
-    embedding vector(3072), -- for text-embedding-3-large
+    embedding vector(1536), -- for text-embedding-3-small
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -177,7 +177,7 @@ CREATE TABLE article_chunks (
     article_id UUID NOT NULL REFERENCES knowledge_articles(id) ON DELETE CASCADE,
     chunk_index INTEGER NOT NULL,
     content TEXT NOT NULL,
-    embedding vector(3072), -- for text-embedding-3-large
+    embedding vector(1536), -- for text-embedding-3-small
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );

@@ -70,8 +70,10 @@ Multi-tenant architecture with:
 Required in `.env.local`:
 - `NEXT_PUBLIC_SUPABASE_URL` (public)
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (public)
-- `OPENAI_API_KEY` (secret - server-side only)
-- `SUPABASE_SERVICE_ROLE_KEY` (secret - edge functions only)
+
+Required in Supabase Edge Functions (set via `supabase secrets set`):
+- `OPENAI_API_KEY` (secret - edge functions only)
+- `SUPABASE_SERVICE_ROLE_KEY` (automatically available in edge functions)
 
 ⚠️ **Security**: See `.env.local.example` and `SECURITY.md` for proper secret handling
 

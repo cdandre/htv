@@ -1,22 +1,24 @@
 # Edge Functions Deployment Instructions
 
-## 1. Document Processing Function
+## 1. Set API Keys
 
-Create the function:
-```bash
-supabase functions new process-document
-```
-
-Copy the code from `supabase/functions/process-document/index.ts` to the generated function file.
-
-Deploy:
-```bash
-supabase functions deploy process-document --no-verify-jwt
-```
-
-Set secrets:
+First, set the OpenAI API key as a secret (only needed once):
 ```bash
 supabase secrets set OPENAI_API_KEY=your-openai-api-key
+```
+
+## 2. Deploy Edge Functions
+
+Deploy all edge functions:
+```bash
+# Document processing function
+supabase functions deploy process-document --no-verify-jwt
+
+# Deal analysis function
+supabase functions deploy analyze-deal
+
+# Memo generation function
+supabase functions deploy generate-memo
 ```
 
 ## 2. Create Storage Bucket

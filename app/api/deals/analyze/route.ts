@@ -12,171 +12,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get deal details with documents
-    const { data: deal, error: dealError } = await supabase
-      .from('deals')
-      .select(`
-        *,
-        company:companies(*),
-        documents(*)
-      `)
-      .eq('id', dealId)
-      .single()
-
-    if (dealError || !deal) {
-      return NextResponse.json({ error: 'Deal not found' }, { status: 404 })
+    // Get the auth token for the edge function
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      return NextResponse.json({ error: 'No session found' }, { status: 401 })
     }
 
-    // Get all document chunks for this deal
-    const documentIds = deal.documents.map((d: any) => d.id)
-    const { data: chunks } = await supabase
-      .from('document_chunks')
-      .select('*')
-      .in('document_id', documentIds)
-      .order('document_id', { ascending: true })
-      .order('chunk_index', { ascending: true })
-
-    // Concatenate all document content
-    const documentContent = chunks
-      ?.map(chunk => chunk.content)
-      .join('\n\n') || ''
-
-    // Create analysis with OpenAI Responses API
-    const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
+    // Call the Supabase edge function
+    const { data, error } = await supabase.functions.invoke('analyze-deal', {
+      body: { dealId },
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-      model: 'gpt-4.1',
-      input: `
-You are an expert venture capital analyst evaluating a potential investment opportunity.
-
-Company: ${deal.company.name}
-Deal: ${deal.title}
-
-Based on the following documents, provide a comprehensive investment analysis:
-
-${documentContent}
-
-Provide your analysis in the following structured format:
-
-## Executive Summary
-[1-2 paragraph overview of the opportunity]
-
-## Team Assessment (Score: X/10)
-- Founder backgrounds and experience
-- Team completeness and gaps
-- Advisory board strength
-
-## Market Opportunity (Score: X/10)
-- TAM/SAM/SOM analysis
-- Market growth trends
-- Timing assessment
-
-## Product & Technology (Score: X/10)
-- Product differentiation
-- Technical moat
-- Development stage
-
-## Business Model (Score: X/10)
-- Revenue model clarity
-- Unit economics
-- Scalability potential
-
-## Competitive Analysis
-- Direct competitors
-- Competitive advantages
-- Market positioning
-
-## Traction & Validation (Score: X/10)
-- Customer validation
-- Revenue/user metrics
-- Growth trajectory
-
-## Risk Assessment
-- Key risks identified
-- Mitigation strategies
-- Red flags
-
-## Financial Analysis
-- Burn rate and runway
-- Revenue projections
-- Funding requirements
-
-## Investment Recommendation
-- Overall score: X/10
-- Recommended action: [Pass/Further Diligence/Invest]
-- Suggested check size: $X
-- Key conditions or milestones
-
-Provide specific evidence from the documents to support each assessment. Be critical but fair.
-      `,
-      instructions: 'Analyze this deal like a top-tier VC partner would. Be thorough, data-driven, and highlight both opportunities and risks.',
-      tools: [
-        {
-          type: 'web_search'
-        }
-      ],
-        store: true,
-      }),
+        Authorization: `Bearer ${session.access_token}`
+      }
     })
 
-    if (!openaiResponse.ok) {
-      const error = await openaiResponse.json()
-      throw new Error(error.error?.message || 'Failed to create analysis')
-    }
-
-    const response = await openaiResponse.json()
-
-    // Store the analysis
-    const { data: analysis, error: analysisError } = await supabase
-      .from('deal_analyses')
-      .insert({
-        deal_id: dealId,
-        response_id: response.id,
-        analysis_type: 'comprehensive',
-        status: 'completed',
-        result: {
-          content: response.output[0].content[0].text,
-          created_at: response.created_at,
-          model: response.model,
-        },
-        token_usage: response.usage,
-        requested_by: user.id,
-      })
-      .select()
-      .single()
-
-    if (analysisError) {
-      throw analysisError
-    }
-
-    // Extract scores from the analysis to update deal
-    const analysisText = response.output[0].content[0].text
-    const scoreMatches = analysisText.match(/Score:\s*(\d+)\/10/g)
-    if (scoreMatches && scoreMatches.length >= 5) {
-      const scores = scoreMatches.map((match: string) => 
-        parseInt(match.match(/\d+/)![0])
+    if (error) {
+      console.error('Error calling edge function:', error)
+      return NextResponse.json(
+        { error: error.message || 'Failed to analyze deal' },
+        { status: 500 }
       )
-      
-      await supabase
-        .from('deals')
-        .update({
-          team_score: scores[0],
-          market_score: scores[1],
-          product_score: scores[2],
-          thesis_fit_score: scores[3],
-        })
-        .eq('id', dealId)
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      analysisId: analysis.id,
-      responseId: response.id 
-    })
+    return NextResponse.json(data)
   } catch (error: any) {
     console.error('Error analyzing deal:', error)
     return NextResponse.json(

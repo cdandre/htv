@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import OpenAI from 'openai'
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-})
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,8 +42,14 @@ export async function POST(request: NextRequest) {
       .join('\n\n') || ''
 
     // Create analysis with OpenAI Responses API
-    const response = await openai.beta.responses.create({
-      model: 'gpt-4.1',
+    const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+      model: 'gpt-4o',
       input: `
 You are an expert venture capital analyst evaluating a potential investment opportunity.
 
@@ -115,14 +116,19 @@ Provide specific evidence from the documents to support each assessment. Be crit
       instructions: 'Analyze this deal like a top-tier VC partner would. Be thorough, data-driven, and highlight both opportunities and risks.',
       tools: [
         {
-          type: 'web_search',
-          web_search: {
-            max_results: 5
-          }
+          type: 'web_search'
         }
       ],
-      store: true,
+        store: true,
+      }),
     })
+
+    if (!openaiResponse.ok) {
+      const error = await openaiResponse.json()
+      throw new Error(error.error?.message || 'Failed to create analysis')
+    }
+
+    const response = await openaiResponse.json()
 
     // Store the analysis
     const { data: analysis, error: analysisError } = await supabase
@@ -133,7 +139,7 @@ Provide specific evidence from the documents to support each assessment. Be crit
         analysis_type: 'comprehensive',
         status: 'completed',
         result: {
-          content: response.output,
+          content: response.output[0].content[0].text,
           created_at: response.created_at,
           model: response.model,
         },
@@ -148,9 +154,10 @@ Provide specific evidence from the documents to support each assessment. Be crit
     }
 
     // Extract scores from the analysis to update deal
-    const scoreMatches = response.output.match(/Score:\s*(\d+)\/10/g)
+    const analysisText = response.output[0].content[0].text
+    const scoreMatches = analysisText.match(/Score:\s*(\d+)\/10/g)
     if (scoreMatches && scoreMatches.length >= 5) {
-      const scores = scoreMatches.map(match => 
+      const scores = scoreMatches.map((match: string) => 
         parseInt(match.match(/\d+/)![0])
       )
       

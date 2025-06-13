@@ -17,6 +17,10 @@
           "--config",
           "/mnt/c/Users/charl/StudioProjects/Neurovo/neurovo/playwright-config.json"
         ]
+      },
+      "Context7": {
+        "command": "npx",
+        "args": ["-y", "@upstash/context7-mcp"]
       }
     }
   }

@@ -80,3 +80,9 @@ Required in `.env.local`:
 - Form validation with react-hook-form + zod
 - Server Components by default, Client Components with "use client"
 - Tailwind CSS with custom theme extending Radix colors
+
+## API Integration Guidelines
+
+### Responses API
+- We MUST use the Responses API
+- Reference the '/docs/OpenAI API Reference' document as needed to understand how to use it properly

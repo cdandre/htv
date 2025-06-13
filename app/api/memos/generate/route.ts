@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import OpenAI from 'openai'
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-})
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,8 +36,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate memo using OpenAI Responses API
-    const response = await openai.beta.responses.create({
-      model: 'gpt-4.1',
+    const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+      model: 'gpt-4o',
       input: `
 You are a senior venture capital partner writing an investment memo for the partnership.
 
@@ -130,13 +131,22 @@ Write in a professional, data-driven tone. Use specific numbers and examples fro
       `,
       instructions: 'Write like a seasoned VC partner. Be concise but thorough. Use data to support arguments.',
       previous_response_id: latestAnalysis.response_id,
-      store: true,
+        store: true,
+      }),
     })
 
+    if (!openaiResponse.ok) {
+      const error = await openaiResponse.json()
+      throw new Error(error.error?.message || 'Failed to generate memo')
+    }
+
+    const response = await openaiResponse.json()
+
     // Create memo content structure
+    const memoText = response.output[0].content[0].text
     const memoContent = {
-      raw: response.output,
-      sections: parseMemoSections(response.output),
+      raw: memoText,
+      sections: parseMemoSections(memoText),
       metadata: {
         company_name: deal.company.name,
         deal_stage: deal.stage,

@@ -224,7 +224,7 @@ export default function DealDetail({ deal }: DealDetailProps) {
               {latestAnalysis ? (
                 <div className="prose max-w-none">
                   <ReactMarkdown>
-                    {latestAnalysis.result?.content || 'No analysis content available'}
+                    {(latestAnalysis.result as any)?.content || 'No analysis content available'}
                   </ReactMarkdown>
                 </div>
               ) : (

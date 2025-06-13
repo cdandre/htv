@@ -1,0 +1,154 @@
+Koby Powell  0:31  
+Hey, Koby, what's up, Charles, how's it going? Pretty good. Happy Friday. Yeah, my allergies are getting beat up right now, but it's been a long week. But sorry my email, I thought we were talking on Monday, so, like, I had it on my calendar, but I thought that we were talking Monday, so I was like, Larry talking
+
+Charles D'Andrea  0:56  
+like an hour, yeah, so what's up? I mean, yeah, always happy to chat, but yeah, what's on your mind?
+
+Koby Powell  1:04  
+Yeah, so I sent you a scope of work document, basically like, so the fun is just Chris and I, and we're start, we're starting to kick off fundraising conversations for fun three basically at the end of the summer. And so we've had conversations just basically, like, all right, we definitely need to, like, start to free up some of our time off of, like, a lot of our, like, administrative stuff. And then that conversation kind of spilled into with, well, there's tools out there that can really do like, a lot of things for us, yeah. So, like, why? You know, kind of cut ourselves short, if we were to just actually go and build, like, a whole operating system that automated a lot of our stuff, that just kind of, so it's like, there's, did you get the document? Like, kind of like
+
+Charles D'Andrea  1:53  
+to come through? Do you just send it, or I
+
+Koby Powell  1:55  
+emailed you it? I can just drop it in the chat too.
+
+Charles D'Andrea  2:02  
+Yeah, as I hasn't come through yet.
+
+Koby Powell  2:04  
+I think I might be falling into everyone's spam. I don't know.
+
+Charles D'Andrea  2:07  
+Oh, really, I've had that problem
+
+Koby Powell  2:11  
+too. I don't know if I got shadow,
+
+Charles D'Andrea  2:13  
+oh yeah, my stamp, yeah. Reporting sucks. I don't know how to fix that. It's not yet. Instantly, I've used instantly, but I can't say it's been a silver bullet. So,
+
+Koby Powell  2:26  
+yeah, yeah. So it's like, we have basically seven modules built out that, like, we would like to have. So basically, like, what I'm seeing is like, and I played around with lovable for a few days, and was just like, it's, I'm just not, it's not worth the technical lift for me to, for either of us to, you know, try to build something out on there.
+
+Charles D'Andrea  2:47  
+So we're just quickly getting the idea, like, visualized and whatnot. But then, I mean, I myself, I all use lovable for, like, I do a lot of like, quick MVPs and but then, like, getting folks, I get out of lovable pretty quick and then start using a few different tools locally. So yeah,
+
+Koby Powell  3:06  
+I've heard what most people go through is like lovable or like bubble, and then they go into cursor to, like, basically build out the back end. Yeah.
+
+Charles D'Andrea  3:14  
+Right now, cloud code is basically like the best from everything I've experienced, and also just from a cost value standpoint, right now a cloud is, like, anthropic are offering, like, the very best deal with their frontier models. So, yeah,
+
+Koby Powell  3:28  
+okay, that's good to know. But so, like, I guess, like, one of the what we're like, would love to see like built, is like a web app that's basically just like our fund operating system. There's seven modules covered. The seventh one is, like sourcing, which I think is would be the toughest one, just because I think that's the most amount of integrations. But I can start with, like, what we've originally talked about building, and this is even, like, more technical, probably, but so like, as a venture fund, like, we ingest three types of data. We ingest industry content, right? So basically just content that orients like our thinking, our thesis. So that looks like industry articles, newsletters, just basically any media that is just educational about housing, real estate technology innovation. So that's like one piece that like is proprietary to HTV. I guess the second is proprietary, like company data. So whether that's portfolio companies or companies in our pipeline that we engage with that. So that's like pitch decks, data rooms, financials, so stuff that like only we have access to. Or, you know, theoretically, and then the third are actual startups. So basically a database of like, all companies in the in real estate technology, basically, you could think of that as like a market map. And so from a platform perspective, we're wanting to basically build a directory of like and become like the source of truth for all housing technology innovation. So if you're a home builder, you can go to like HCB website, and we're actually looking at acquiring, operationally, a platform called the housing Innovation Alliance, and it's basically like 2000 paying members to just get access to, like, events, education and basically that. But they don't have like, a database of, like, okay, like I'm looking at, I'm a broker, and I need to look at mortgage technology or something for my, you know, workflow. So, so that's, like, our grand scheme, like grand vision, but so that. But that's kind of where that third piece comes in. So basically, taking, like, that data layer of these three types of data that would allow us to underwrite companies really quickly, just to being saying, like, okay, like, here's, like, a market map of, here's the competitors. Here are, here's the data that we have from like, a like, like, here, I'm trying to think of what I'm trying to say, like, here is ever all of our readings on HVAC, the HVAC industry and and so we want this thing to basically like for you, to generate memos to underwrite a deal. So basically, like, All right, put put in a pitch deck. Put in whatever they send us it being able to like, quickly give us, like, a one pager about what the company is, what it does, competitive set stuff like that. So basically that just lets us throw out the trash quicker than letting it sit in our pipeline for a week, like, oh, like, it's not bad enough to throw out, but it's also like we're not running at the to go throw money at it. That saving time on that would be nice. That's kind of like our biggest headache right now. So okay,
+
+Charles D'Andrea  6:43  
+so it's basically like a lot of what I'm hearing is basically like synthesis of, like, a lot of the data that basically just feeding into the system, like you want to be able to generate new insights based on that data, and just be able to understand basically and generate what you need to generate based on that, right? It doesn't sound like from what you've shared so far. Like that there's a lot of like, Agent tic like, things where it's like, you want, you want an agent that's going to go out and, like, perform certain actions, like, in, like, a large number of other tools for you, right? Yeah,
+
+Koby Powell  7:22  
+and that's why, like the I put sourcing module at the very bottom, I think that is where that gets pretty hairy, because that is where you start to incorporate, like going out to LinkedIn, which is already kind of a hassle, or CrunchBase, or like these other platforms, what so like, everything else is really just, like, proprietary data management and then deploying. So like, I've seen that, like, I think it's possible to have, like, just deploy agents on that data to perform certain tasks. So like, memo generation, being able to, like, feed it all of our memos, and like, saying, showing it like, and training it
+
+Charles D'Andrea  8:01  
+on that. So it sounds like you, right? Yeah, in this structure and whatnot would be similar, yeah, interesting, yeah, we've actually built out just like a little bit of, like our own platform, just for, like, our clients and our companies, where we at least have, like, essentially, kind of a data room light. It's really more intended for, like, technical artifacts, but like to where we can put all of our technical documentation or connect out to other systems, like we have a tool that does, like, static code analysis for security, like generating security reports and that type of thing. And we've, we've built our own, like, custom AI reporting based on that data to where, like, we could, we could generate if someone needed, like, to perform a technical due diligence on a company. Like, that's kind of how we were envisioning it, but, like, there's certain like customization options within that. It sounds like our approach could be somewhat similar in building out a platform for each tubing. Yeah,
+
+Koby Powell  9:08  
+cool. Well, it's good to hear. I'm talking. We're talking to like five or six other dev shops just saying, like, are you even, like, understanding what I'm trying to say, right? Yeah, as it's like, I think it's all a lot of the stuff can be, like, genetically performed, like, even with like, the underwriting piece. I guess it's just like web scraping,
+
+Charles D'Andrea  9:31  
+yeah, where the source, the data sources, obviously, do. You have particular ones that you know you're you want to give preference to, or that you want to, like, direct toward, or like, if we just performed a general kind of, like, AI driven deep research on the open web. Like, is that probably good enough? Or
+
+Koby Powell  9:51  
+I would think so and so. Like, when I do it now, like, I'll just go use, like, chat, GPT, clod and perplexity. And be like, put it in there. And be like, alright, like, I finally 10 competitors, yeah?
+
+Charles D'Andrea  10:04  
+Like, chatgpt, yeah, okay, cool. So
+
+Koby Powell  10:08  
+I, and usually those are pretty accurate. It doesn't, it's not, you know, comprehensive, but at our stage, like, what is, you know what I mean, like companies that are have raised, like, companies with like, less than 10 employees, like, I don't think there's anything out there that's going to be able to completely scan and find everything right,
+
+Charles D'Andrea  10:27  
+right? Yeah. And actually, like, I've done a couple product jam events where, like, early stage companies, where we'll go through kind of SWOT analysis, competitor analysis, that type of thing. So we've leveraged perplexity, chat, GPT, etc. And sometimes it's interesting to actually just compare the results for multiple ones, because they ones, because they might get, might find different things, yeah, yeah,
+
+Koby Powell  10:48  
+yeah. So we're just trying to figure out the best way and, and obviously, like, the most affordably to get this done, or the scope of work covers everything. But it's also like, I feel like, like, you come back to, like, just having that, like, you know, Bedrock Data Layer is kind of key to the whole thing that, you know, portfolio management. And honestly, the way it reads is like, kind of how it is important. So, like, the underwriting is like, the most important, and then the bottom is the least important. I would probably say portfolio management, it might be the least important in terms of, like, timeline wise, just because, like, we're just now deploying, like, that's but, I mean, we'd like to have this thing at least somewhat up and running by the end of the summer.
+
+Charles D'Andrea  11:36  
+Yeah, I think it's doable. I mean, I'm turning out MVPs in 48 hours now. So I think we could do something more like, is substantial here in, you know, months like, we could do stuff that really solid. But you know, me and my team, like, like, I said, like, we have experienced building out, like, rag architecture, which is probably going to be relevant for like, if you have like, pitch decks and other things like that, being able to extract the actual, like relevant data and store it for rag. You know, technology continues to move and evolve, though, so like, there's also just like new tools where, I mean, everything's become more multimodal. So in the past, like AI's ability to understand charts and graphs has been limited, but in, I don't know, recent months now, like there's actually, like a real opportunity to where you could actually feed in, like something a little bit more complicated, something a little more technical, and have it understand, you have to test and learn to a certain extent, and it's a probabilistic system versus deterministic. So, like, You're not always going to get, like, the same results, or necessarily even the same quality of results, but you can try putting as many controls and as much training as possible to get you know what you're looking for.
+
+Koby Powell  13:00  
+Yeah, just this week, I wrote a memo and been like, predominantly in chat GBT, and basically uploaded this company's like, whole data room in there, and I've already fed it like, 10 to 10 of our, like, historical memos we've written in the past. And like, for our tech size, our memos are pretty like, in detail. Mark McDowell is actually one of the guys that reviews them. Since we don't have, like, we don't have, like, an investment committee, and, like, he's even told us, like, this is, like, one of the more in depth memos I've ever seen. Like,
+
+Charles D'Andrea  13:30  
+it's amazing. You're like, yeah, I generated five minutes on chat, yeah. Well,
+
+Koby Powell  13:34  
+no, like, so it honestly will take me, like, four hours to put together, like, a memo that I'm, you know, because it's just Chris and I, but, but it has gotten better and better, because I've started like, I've just went through and like, basically prompted it. Like, I went to like, because I tried to build a GPT in there, and it was like, Well, how about like, let's just like, build it here so I understand it. So then I fed it like, like, 10 PDFs, like, of historical memos. Got it talking with, like, learn, like, figured out how to prompt it to, like, get more detail in each section, beef it up, and then, like, upon, like, the third or fourth try, like it was putting out, like, like, high quality grade like, memo sections. So like, these are usually, like, six to eight pages, single spaced memos. And I basically got it there. I still had to go in and, like, you know, augment and, like, give some like flavor to it, but that was to the point I was like, this is definitely scalable. And it was all just from, like, putting all of our memos in there and then putting in, like, the company's whole data room, and just be like, okay, like, use all of this and, like, try to recreate this. That's awesome.
+
+Charles D'Andrea  14:41  
+Yeah, let me show you really quick, just like what we built internally, just for reference. So like, this is, like, one of the companies we're working with, charge on site. We We've organized internal documentation. It's not the prettiest right now, but like, we can dump in documentation related to testing or how the products built, or product components, like I was saying, you can, like, basically add in whatever files you want here, or link out to Google Drive or and we're trying to add more, just like, direct integrations over time. And then you can go over to, like, our AI assistant and actually, like, chat with the assistant about, like, any of the documentation that's in there, and it'll, like, generate a quick, like response about whatever you want and give it so you can, like, cite whatever document you want, and it like, bring it up, and so you can see that where the where the answer is coming from. And then, like, we recently, more recently, built out like, a reporting capability. So like, at the admin level, right now, I'm at the company level, but like the admin level, you can come up with, like, basically, like, here's a standardized report of, like, you know, market analysis for this was actually just an example, but like, shoot it preloaded. But like they said, you can come up with, like, a standard report that you want generated with, like a standard set of prompts for each section, and then have either, like, the the studio that's running this report run that for one of their companies, or have the company itself run it. You know, like, have a founder who can actually just like self provision to, like, better understand how their product is posted, or, like, what it could be literally, I guess, like anything. But yeah, I think that some of it like similar architecture, perhaps, like, in your case, though you're you're coming in loaded with like, a lot of like, very useful, valuable data from like, everything you've done so far, like, all the memos, investment, theses, and whatever else you need to create, like, we could train the AI like, to like, like we're talking about earlier, to sound like you, to think like you, right, to approach the problem like you would, rather than just relying on, like, whatever the default is, which basically, like, what we've done is generally just like, we don't have, we're not we're only, like, a year old as a firm so, like, we don't have as much of the like, all that. No. So, yeah, yeah, we could, we could definitely do that. But I don't think like, necessarily, like, it's not like this platform would be in the way we structured, it would be exactly what would serve you. But just, just an example, you know, kind of something along the
+
+Koby Powell  17:31  
+same lines, yeah, and I can share this real quick, like, this is like, how I keep, like, all of our content right now in terms of, like, the industry content. So this is basically, like, 1/3 of, like, all of our data that I was describing. So these are all just articles that, like, I'm subscribed to, like, 50 newsletters. And like, you know, this seems like two hours of my week, so it's like, in a perfect world, like, and I've learned about it, like, I could set up an email parser, basically devote an email address to all these newsletters, automate, like, the retrieval of, like, the contents of those newsletters, and then basically train it to, like, do this, and then being able to deploy an agent on this. So there's like, 100 and something articles here, and basically, so if then we're looking at a company that is in a home renovation software, it'd be able to, like, pick this article out, learn from it, you know, and just kind of orient itself to like that, which I don't think is too ambitious, but like, we've been pragmatic, or I've been pragmatic about like, so like, here's all like, fundings like that are in our space that are interesting enough to put my newsletter acquisitions, and then we keep track of like publicly traded companies, like their recent filings. So like, I have the data structures
+
+Charles D'Andrea  18:50  
+that are like coming in that you've subscribed subscribe to, right? And you're like, I guess would, would, would you say like these sources, like, are generally, like, higher quality that you like, you want to kind of give preference, like, if to like the analysis provided from these sources, yeah, yeah. Okay, yeah. And so in that case, that makes sense, like you would you want to, like, store these essentially, or at least have, like, basically what you've done here, built out a database, essentially, of all these, let the like the agent go and find which ones are relevant. This essentially could be like the database on the back end, and then just allow the agent to go and like exactly what you're doing, okay, find the relevant, find ones that are like, matching relevant topic. Go out to the link. We don't even need to like necessarily, even like source in the data, like the model. The agent can go out and just like, you know, web search and go find what it needs, right?
+
+Koby Powell  19:45  
+Yeah, yeah. And that's what I've thought is like possible. So, like, here's, like, a memo. It's pretty standard. I mean, the company overview in history, here's, like, our conversation, like, here's how we found it. Overview of the team, which, like, this is like, you know, going through their LinkedIn product, and by this point, like, we've had like, four or five conversations with the team. So another thing is, I want to start transcribing our meetings with these founders and then uploading that into it. So like, we use Addio right now for our CRM and that, like, I just create notes for, like, okay, like, here's like, my takeaways from this call, stuff like that. So it's like, I think if we can transcribe meetings, upload them into this operating system, I go to, like, double click on home, for example, I have, like, all of our thoughts, all of our questions, prepared, and then a trans transcription from each meeting with them. And then from there, like, the only part that we have to go and, like, add our voice into, because, like, this is, this is pitch deck information. This is pitch deck information. This is pitch deck financial forecast that they usually provide. You know, this would probably be a little bit of our voice, but then also a lot of the data that I just showed you, you know, like, how big is the problem here? Trends and timing is probably the one manual piece of this. Just like, why do we as investors think that this is a good investment to make right now? And that's, that's pitch deck. This is probably pitch deck as well, with some of the deal underwriting like that. That might be a little more manual, but that's also, like, probably should be show, have a few examples of outcomes, like, that's Chai T. Can do that for you at this point. Risk assessment, that's probably the more interesting piece of it. So we look at operational market and financial risk. So it's just like, what where if this company goes to zero? Like, where most likely is that from so this one's kind of interesting. I don't really know where would be the source of truth for that, and then deal assessment, this one's probably pretty manual as well, because we basically get like, a weighted, like expected value of the investment. So it's like 25% chance this returns 250 grand to us. I don't know how well an AI is gonna be able to do that. Yeah, I don't
+
+Charles D'Andrea  22:05  
+know either. Like, I mean, I would love to just, like, give it a shot, you know, based on all the training, right? And see, I mean, also, like, I mean, once you have enough of these, right? There's certain pattern recognition, right? You probably have similar probabilities for similar companies at similar things is, like, you're building that, that actually assessment based on everything else you have in this report, to a certain extent, right? Yeah, so, so,
+
+Koby Powell  22:30  
+like, that's what I'm saying, is like, especially with because, like, the memo generation is, like, by the time we get to writing a memo, it's like a 90% chance we want to write a check into it. It's really just, like, documentation. So like, Chris and I talked about, it's like, this thing, like, realistically, probably takes us upwards of 10 hours to crank this, like, polish it, and be able to where we're sending it to our LPs. Like, here's an investment we just made. So it's like, we should be able to automate that. That's so much time, you know, it's a 99% Yeah, automated
+
+Charles D'Andrea  23:01  
+something like I used, you know, you you're gonna want to read the, I assume you still want to read the memos before they got the door. But, yeah, yeah, and so,
+
+Koby Powell  23:11  
+yeah, you get what I'm saying, though. So it's like, how many of these you have?
+
+Charles D'Andrea  23:16  
+Probably upwards of 20. Okay, yeah, that's enough to work with. Yeah, 20. So, yeah, cool, yeah. And that's, and that's the biggest need right now. So like, we could potentially just, like, start with that, and then, like, is it carve that out and and go from there, yeah?
+
+Koby Powell  23:36  
+And like, the way our workflow goes is, like, we bring a company in, we get its pitch deck. I determine whether or not it's worth 30 minute phone call. If it's worth that, it's basically just like, let me get to know the product. Let me get to know the founder really well. That's where I kind of dig into all that. I usually have questions pre prepared. So we have four different stages. It's we call it thesis alignment. So if it's thesis aligned, then we'll look at its pitch deck. And then if I like the pitch deck, and I go have a conversation with the founder, it's now in signals. So it's like, all right, what signals are we getting off this company? For it to be venture backable from signals, if it makes it, if we have a call with them, and I'm like, I still really like this, then it moves on to validation. So from there, that focuses on, like, the market timing, all so, like, it's almost the way the memo reads like. So as you get deeper into it, those are kind of like the points where massaging out of each thing. So from a deal underwriting perspective, like the workflow ideally, like the front end of like, it reads the same way that, chronologically, we look at the deal. And so we want it to be like, for each, like, the underwriting process in the web app, it would be able to, like, start to pre write each of these sections, and then from there, like, I kind of have like a one pager of the company. And then by that point, the memo is already halfway written. At that point, just putting, like, meat on the bones, I guess,
+
+Charles D'Andrea  25:01  
+yeah, yeah. Totally makes sense, yeah. And then, like, it's a standard, standardized template, you're saying, right? So, like, Yeah, it sounds the mean. It's nothing we haven't done before, actually. So yeah, totally get it. It just gonna be a matter of fine tuning to make sure, like, initially, like, we start with the 20 memos, right? Be like, okay, basically, here's the standardized sections, here's some examples, right? And then from that, right, in order to, like, train it, you know, like, a here's how we're going to approach building out each section of the report. But then from there, it's going to be a little bit of fine tuning, of, like, showing you, like, running through some examples, right? And then being like, okay, like, is this close? Like, like, how, how good is this, right? And you have to give, we have to provide some feedback and do some, essentially, like, instruction tuning, right? And that might actually end up being like, the longest part of it, but, I mean, wait, I think we can get there very quickly. Yeah, yeah, sweet. I think you said you're chatting with a few other dev shops. I saw someone respond to Chris's post on LinkedIn saying, like, don't use a dev shop because, like, you're you're just gonna, like, burn through your entire budget and not have anything. And oftentimes, like, that is the case. I hear stories like, literally every week from folks who are like, Oh, I blew 30k 40k on a dev shop. They never delivered. And like, I don't know what the deal is. A lot of DEV shops are not, like, not incentivized to ever finish the job, because as soon as they do, then they're out of work. It's kind of like health care, yeah, we like to try to take a longer term perspective where, like, we could be a long term partner for folks. Obviously, like, this case, is a little bit different than a lot of the like, early stage, you know, startups that we'll partner with, where we can just, like, take some equity. Hey, we have skin in the game. That's what we like to do a lot of times. But like, I think this could be a good partnership where there, I mean, as we are looking toward investing our sweat in future startups as well, like future founders you might be working with, like, there could definitely be, like, a longer term win, win, right? So, yeah, we're a small shop as well early and so I'm still in the stage of, like, bending over backwards to do everything possible to make sure that our clients are happy. Some of the more, like, bigger, more established firms, like, you might just be another, you know, cog in the wheel, but,
+
+Koby Powell  27:41  
+yeah, yeah. Well, maybe just put some thought into pricing. Like you said, like, it's kind of interesting, like, we're obviously, like, fund equity is different than startup equity, and so I don't, I don't know if we'd be comfortable. I mean, I don't know I'd have to talk to Chris, but, like, equity, I don't even know if I'm totally open just
+
+Charles D'Andrea  28:03  
+doing, like, basically agency work, in this case, like for us, like for me, like Mike at agency work, that's like, Well, that just provides additional cash flow that I could potentially invest maybe in some of your portfolio companies. Absolutely. Yeah. Others, right?
+
+Koby Powell  28:16  
+Yeah. And have you met Chris before?
+
+Charles D'Andrea  28:21  
+I so I was at a pitch breakfast where he that, but I haven't actually had the chance to get to that good. Oh yeah, yeah. He's great.
+
+Koby Powell  28:28  
+He's super easy to work with, very flexible. So he and we want to work with someone in Charlotte. So, like, we want, we want to make sure this is something where we're not just, like, you know, cast overseas and like, it's impossible to get, you know, flexible in whatever needs to happen. So we definitely want to get, we definitely give preference to Charles based, anyone. So I think having a conversation with Chris would definitely be helpful. But maybe, like, over the weekend, maybe just put some thought into, like, timeline and cost maybe, or just however you would want to approach that. Yeah, and then we can kind of get a conversation going next week. He's out of town, Tuesday, Wednesday, Thursday, I think. So maybe, maybe Friday would be a good time that we could probably even get coffee or something.
+
+Charles D'Andrea  29:13  
+Okay. Yeah, sounds good. Are you looking for any like, kind of broader support or guidance? That's like, I have partners who, you know, focus more on kind of, like product design, you know, like, more like a CPO, or, like, you know, more of the strategy and design type. Like, if, are you looking to take, sorry if I missed it, but are you looking to take this product, actually offer it, perhaps to other funds, or you just want to keep it internally as
+
+Koby Powell  29:39  
+your own, our thinking is keeping it internally and like, we've talked to other shops that were like, we could white label it for you. I don't. I don't know if we want to eat that cost. I don't know what that would look like. I mean, maybe if you want to put some more thought to what that would look like, comparing the two, that'd be helpful, just because, like, I don't really have any transparency on like, what that usually looks
+
+Charles D'Andrea  30:01  
+like, sure. okay, yeah I can put together some ideas for. Awesome.
+
+Koby Powell  30:05  
+Sweet Well, this is great, and glad we're on the same page. This is definitely the easiest conversation, so Oh really,
+
+Charles D'Andrea  30:13  
+this is my space. So, yeah, it was great, great chat with you. Have a great weekend. Yep, you do the
+
+Koby Powell  30:19  
+same talk you like.
+
+Transcribed by https://otter.ai

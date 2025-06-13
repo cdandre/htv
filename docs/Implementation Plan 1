@@ -1,0 +1,790 @@
+Great — I'll begin developing a highly technical implementation plan focused on the Deal Screener/Underwriter and Memo Generator modules, including data ingestion architecture, OpenAI integration, and backend infrastructure on Supabase or AWS Serverless, with Vercel for frontend. This will be a detailed guide a software team can use to build the system.
+
+
+# Implementation Plan for HTV Venture Capital Operating System (Deal Screener, Memo Generator, Data Ingestion)
+
+## Overview
+
+Home Technology Ventures (HTV) is building a vertically integrated venture capital OS to streamline deal sourcing, underwriting, and content generation. This plan focuses on the highest-priority components:
+
+* **Deal Screener / Underwriter:** Automate ingestion and analysis of startup data (pitch decks, LinkedIn profiles, financials, etc.) and produce structured diligence reports.
+* **Memo Generator:** Generate standardized 5–8 page investment memos from Deal Screener outputs.
+* **Underlying Data Ingestion Layer:** A “bedrock” data pipeline to ingest and process:
+
+  * **Industry Content:** Articles, newsletters, filings, etc. for market/sector knowledge.
+  * **Proprietary Company Data:** Pitch decks, data room documents, internal notes.
+  * **Startup Directory / Market Map:** A dynamic database of startups (sectors, stages, etc.) to contextualize deals.
+
+The platform will use **Vercel (Next.js)** for the front-end and either **Supabase** or **AWS Serverless** for the back-end. All AI functionality (document parsing, summarization, risk analysis, memo generation) will leverage **OpenAI’s models** via API. The solution will be fully custom (no low-code tools). Key design goals are **modularity**, **security**, and **scalability**, with a unified backend supporting all modules.
+
+## System Architecture Overview
+
+&#x20;*Figure: Example architecture for an AI-powered deal screener and memo generator (inspired by Flybridge’s open-source memo generator). Documents are ingested (with OCR for images and external data sources like LinkedIn), processed through AI agents and OpenAI models, and results are stored and logged.*
+
+The system follows a **modern web architecture** with a clear separation between front-end and back-end services:
+
+* **Front-End (Next.js on Vercel):** Provides a responsive UI for uploading documents, entering deal information, viewing analysis reports, and editing/generating memos. It will communicate with backend APIs (via HTTPS fetch calls) and handle authentication. Vercel’s hosting ensures global edge delivery for low-latency UI, and Next.js can leverage Server-Side Rendering and static generation for certain pages (e.g. viewing memos).
+
+* **Back-End:** Responsible for data storage, business logic, AI integration, and background processing. We evaluate two approaches for the back-end:
+
+  * **Option A – Supabase (Postgres + Edge Functions):** Supabase offers an all-in-one BaaS: Postgres database with vector support, file storage, authentication, and serverless functions. It is *easy to use and quick to launch*, ideal for a startup MVP. Supabase’s stack (PostgREST, RPC, realtime) can speed up development of CRUD APIs and real-time updates.
+  * **Option B – AWS Serverless (Lambdas + AWS Services):** An AWS architecture provides maximum scalability and a rich ecosystem of services. We could use API Gateway + Lambda for APIs, S3 for storage, DynamoDB or RDS (Postgres) for data, and perhaps AWS Comprehend/Textract for some parsing. AWS is highly scalable and has strong security/compliance features, but comes with more complexity and a steep learning curve for a small team.
+
+**Recommended Stack:** Start with **Supabase** for the initial build, given the accelerated timeline and need for rapid iteration. As an AWS cloud architect noted, Supabase makes it “just so much easier and quicker to launch a product”. Supabase’s open-source Postgres foundation and built-in auth align well with our needs. We will design the architecture to be cloud-agnostic enough that we could migrate to AWS later if scaling to enterprise levels or needing specialized services. Supabase can handle our expected user load (internal team and moderate document volume) and offers the pgvector extension for AI use-cases. In summary, **Supabase provides a friendly developer experience** for our team and covers all basic backend needs out-of-the-box, whereas **AWS** can be phased in for specific needs (e.g. heavy-scale or specific AI services) once the core product is validated.
+
+### High-Level Architecture Diagram
+
+The above figure illustrates the high-level design:
+
+* Users access the web app (Next.js) via a browser.
+* When a user uploads documents or requests a memo, the front-end calls backend APIs (either Supabase Edge Functions or AWS API Gateway endpoints) over HTTPS.
+* Uploaded files (PDFs, etc.) are stored in a **Storage Bucket** (Supabase Storage or AWS S3). The upload triggers a **processing workflow**:
+
+  1. **Ingestion Lambda/Function:** A serverless function is invoked (via a webhook, bucket event, or direct API call) to parse the document.
+  2. **Parsing & Embedding:** The function extracts text from the file (using PDF parsers, OCR, etc.), then sends text to OpenAI for analysis as needed (e.g. summary or entity extraction). It also generates an **embedding vector** for the content using OpenAI’s embedding model, storing both raw text and vectors in the database for later retrieval (RAG).
+  3. **Database Storage:** The structured data (extracted fields, summaries) is saved in the Postgres database. Any vector embeddings are stored in a vector index (pgvector in Postgres) associated with the content.
+  4. **Notification:** Once processing is done, the system can notify the front-end (e.g. via Supabase’s realtime or a callback) so the UI can update to show the available analysis.
+* The **Deal Screener** logic (which may run in the same ingestion function or a separate function) uses a combination of the parsed data and additional AI calls to produce a **diligence report** (saved to the DB).
+* The **Memo Generator** can be triggered by the user (e.g. “Generate Memo” button). It will retrieve the structured data from the Deal Screener, pull in any relevant context from the knowledge base (vector search), and call OpenAI to compose the memo. The resulting memo is returned via the API and also stored (in the database and/or as a document file).
+* All these components rely on the unified backend (same DB and storage), ensuring **modularity**: e.g., the Pipeline Dashboard and Portfolio modules (in the future) will tap into the same data repository. Authentication and access control guard every API call.
+
+## Front-End (Vercel + Next.js)
+
+The front-end will be implemented in **TypeScript** using **Next.js** and deployed on Vercel for fast global access. Key front-end responsibilities and implementation notes:
+
+* **User Interface:** Design an intuitive dashboard with modules for:
+
+  * **Deal Screening:** An interface to create or select a deal, upload documents (drag-and-drop), and input any additional info (e.g. company name, LinkedIn URLs of founders, etc.). After processing, the UI shows the auto-generated diligence report (with sections like Team, Market, Product, Risks).
+  * **Memo Editing/Viewing:** A rich-text editor or formatted view for the investment memo. Initially, this can be a simple text area or a Markdown editor pre-filled by the Memo Generator. Users can tweak the content, and eventually those edits can be captured for the feedback loop.
+  * **Knowledge Base Search (optional):** A search box for internal content (industry articles, prior research) to allow analysts to manually query the ingested data. This can be powered by the vector search on the backend.
+* **File Uploads:** Use Next.js API routes or direct to storage uploads. For example, with Supabase we can use the supabase-js SDK to upload files directly to Supabase Storage (to offload from our server). Vercel’s environment will hold the necessary upload keys securely.
+* **API Integration:** The front-end will call backend APIs for tasks:
+
+  * `POST /api/deals/:dealId/upload` – to upload and process a new document for a deal.
+  * `GET /api/deals/:dealId/report` – to fetch the structured diligence report.
+  * `POST /api/deals/:dealId/generateMemo` – to trigger memo generation.
+  * Also endpoints for managing the knowledge base (e.g. list content, etc.).
+  * With Supabase, much of the basic CRUD (deals, content, etc.) can be done via Supabase’s auto-generated REST (`/rest/v1/...`) or GraphQL endpoints. The custom logic (OpenAI calls, complex pipelines) will reside in serverless functions.
+* **State Management:** Leverage React state and perhaps a global store (Redux or React Context) to handle the pipeline states (upload progress, processing status, etc.). For multi-step processes (upload → analysis → memo), provide user feedback (spinners, status updates).
+* **Real-time Updates:** Supabase’s realtime can push notifications (e.g. when a report is ready). Alternatively, use polling on the front-end to check the status of processing jobs. Realtime updates improve UX by removing the need for manual refresh.
+* **Security (Front-End):** Use **Supabase Auth** or another auth provider to handle login. Supabase provides a pre-built Auth UI or use NextAuth. All API calls include the user’s JWT for authorization. Next.js can enforce API route protection (checking for valid session) or we use Supabase’s Row-Level Security so that even if an API URL is hit, data is scoped to the user.
+
+## Backend Architecture and Technology Stack
+
+### Data Storage and Services
+
+* **Database:** Use **PostgreSQL** as the primary database (Supabase’s managed Postgres or AWS RDS). The schema will cover deals, companies, documents, memo texts, and user accounts (detailed in a later section). Postgres is chosen for reliability, relational integrity, and native JSON support (for storing AI outputs or prompt logs). Crucially, we will enable the **pgvector** extension to store embeddings and perform similarity search within SQL. This avoids needing a separate vector DB initially, simplifying architecture.
+* **Vector Store:** By using pgvector, our **vector database** is integrated with Postgres. We can store embedding vectors (e.g. 1536-d float vector from `text-embedding-ada-002`) in a column and index it for similarity search. Alternatively, if we scale or want managed vector DB, we can integrate **Pinecone** or **Weaviate** later. For now, pgvector gives us semantic search on ingested text directly in Supabase.
+* **File Storage:** All raw documents (PDFs, Word, images) will be stored in a **secure bucket**. In Supabase, we’ll create a private bucket in Supabase Storage for documents. In AWS, use a private S3 bucket. The storage path or file URL will be saved in the database for reference. Access to files will require auth – e.g. Supabase can generate signed URLs for downloads, or our API can proxy files from S3 with permission checks.
+* **Serverless Functions / Lambdas:** These contain the core backend logic:
+
+  * **Document Ingestion Function:** Triggered on file upload (via webhook or explicitly). It parses files and calls OpenAI APIs to extract insights (details below).
+  * **Analysis/Underwriting Function:** Takes cleaned data and performs the deeper analysis (team profiling, market analysis, risk scoring using AI), populating the Deal Report.
+  * **Memo Generation Function:** Assembles data and prompts OpenAI to create the memo. Could be same as analysis function or separate for clarity.
+  * We will implement these as **Supabase Edge Functions** (written in TypeScript, running on Deno) if using Supabase, or as **AWS Lambda** functions (could be Node.js or Python Lambdas) if on AWS. Both options support calling external APIs (OpenAI) and database access. Supabase functions have access to the Postgres (with a service role key) and can bypass RLS for privileged operations.
+* **Background Jobs:** Some tasks (like large PDF parsing or memo generation) may take time. These will run asynchronously in the above functions. Supabase Edge Functions can be invoked and run to completion (with a timeout \~60s, longer tasks might need splitting or a background job system). If needed, we can incorporate a lightweight queue (e.g. use a Postgres table as a job queue, or an external service) to track tasks. AWS would use services like SQS or Step Functions for more complex pipelines. Initially, we aim to keep it simple: trigger the function, have the front-end poll or wait for result.
+* **External APIs & Tools:**
+
+  * *OpenAI API:* The core of all AI processing. We will use GPT-4 (or GPT-3.5 Turbo for some tasks) for text generation and analysis, and `text-embedding-ada-002` (or latest embedding model) for vector creation.
+  * *LinkedIn API / Proxycurl:* For founder profiling, we might integrate with a service like **Proxycurl** (a paid API that returns LinkedIn profile data given a URL) to get structured info about founders (education, work history). This avoids brittle web scraping and respects LinkedIn’s ToS. We could also use the LinkedIn official API if we have access (requires partnership for full profile data). The alternative (for MVP) is to rely on the pitch deck/team bios and have GPT summarize founder backgrounds from there. But automated LinkedIn integration is ideal for accuracy.
+  * *Email Ingestion:* For newsletters or any email content, we can set up an inbound email parser (e.g. using SendGrid’s inbound parse webhook or Mailgun) to forward emails to an endpoint that saves them as documents in our system. This would feed the industry content ingestion automatically for any subscribed newsletters.
+  * *Web Scraping:* For industry articles or filings, we might use APIs (e.g. News API) or an open-source crawler. We need to ensure we don’t violate any terms; likely we will ingest content that the team explicitly provides (uploading PDFs or pasting URLs). If automating, use an HTML content parser (like the **unstructured.io** toolkit or a simpler library) to extract text from URLs.
+
+### Supabase vs AWS – Stack Decision Rationale
+
+To reiterate, **Supabase** is selected for the initial implementation due to its developer-friendly, integrated approach. It gives us Postgres (with vector search), file storage, auth, and serverless functions in one platform. This reduces setup time and operational overhead for the team, which is crucial given our goal to have a working system by end of summer. Supabase’s free tier and open-source nature also make it cost-effective for a prototype. The trade-off is that Supabase is less proven at massive scale and offers less fine-grained control than AWS. As usage grows, we will monitor performance (especially of vector queries and edge function cold starts). If we hit limits, we can consider migrating critical components to AWS:
+
+* For example, if OCR or parsing tasks are too slow on Deno functions, we might create a Python AWS Lambda for heavy CPU work (since Python has robust PDF libraries). We could then call that Lambda from our Supabase function or via HTTP.
+* If the vector search or DB load becomes high, we could move to a dedicated PG instance or a specialized vector DB service.
+* AWS could also be introduced for enterprise needs like fine-grained IAM security, VPC isolation, compliance (if needed for sensitive data).
+
+In summary, start with **Supabase for speed of development**, with architecture modular enough to swap in AWS services as needed (e.g. using repository pattern for storage and a thin service layer abstracting the specific backend).
+
+## Data Ingestion & Parsing Pipelines
+
+A robust **data ingestion layer** underpins the Deal Screener and Memo Generator. It will handle a variety of content types and transform them into structured, machine-readable text with metadata. There are three main ingestion flows:
+
+### 1. Document Ingestion Engine (Deals and Proprietary Data)
+
+This pipeline handles **pitch decks, business plans, financial statements, and other deal documents** provided to us. The goal is to extract all meaningful text and data, so that the AI can analyze it. Key steps and implementation details:
+
+* **Uploading Documents:** Users can upload PDFs, Word docs, Excel sheets, images (like an infographic or org chart), or even text transcripts. We’ll allow multiple files per deal. Each upload creates a **Document record** in the DB (with fields: id, deal\_id, filename, file\_type, etc.) and saves the file to storage.
+* **File Parsing:** A serverless function will pick up the file (either via direct call after upload, or an event). We will implement a **multi-strategy parser**:
+
+  * **PDF Parsing:** Use a Node or Python PDF parsing library. For example, in Node we can use `pdf-parse` (as shown in a RAG example project) to get PDF text. If `pdf-parse` fails or misses content (e.g. if the PDF has images of text), we fall back to OCR. We might also use Poppler’s `pdftotext` for a second attempt. This layered approach (parse text, then OCR if needed) ensures even scanned docs are handled. An example from a similar implementation tries `pdf-parse`, then `pdftotext`, then Tesseract OCR. We will implement the same approach in our ingestion function (possibly using Python’s **PyMuPDF** or **pdfplumber** for parsing and **Pytesseract** for OCR fallback).
+  * **DOCX Parsing:** Use a library like Mammoth (as in the example) or Python-docx to extract text. These can pull out all paragraphs from Word docs.
+  * **Excel/CSV Parsing:** Financial model spreadsheets may contain important data. We can use a library (SheetJS in Node or Python’s openpyxl/pandas) to read cells. Often we might extract certain summary tables or at least tabular data as CSV text. For initial scope, we might not fully interpret Excel financials, but we will store them or convert to CSV and perhaps use OpenAI to summarize if needed.
+  * **Images (PNG/JPG) or Scanned PDFs:** Use OCR via Tesseract or an OCR API (AWS Textract or Google Vision). Textract is powerful for structured data in documents (tables, forms) – if financial statements are provided as scanned PDFs, Textract could extract key fields. Since we prefer OpenAI, an alternative is to OCR to text and then let GPT-4 interpret if needed.
+* **Content Cleaning:** After extraction, clean the text (remove control characters, extra whitespace). Preserve some structure (we might keep headings or slide titles). We also **chunk the text** if it’s very large: e.g. break into \~1000-token chunks with overlaps (using a simple splitter or libraries like LangChain’s text splitter). Chunking is crucial for creating embeddings and feeding into GPT context windows without exceeding limits.
+* **Embedding Generation:** For each chunk (or for each whole document if small), generate an embedding vector using OpenAI’s embedding model. This will be used for similarity search during Q\&A or memo generation. We will store these vectors in a `document_vectors` table (or within the documents table using pgvector). The embedding generation can be done in the same ingestion function call to OpenAI (it’s fast, 1 API call for each chunk of text).
+* **Metadata Extraction:** In parallel to plain text, we attempt to extract key metadata:
+
+  * For pitch decks, look for fields like *Company Name, Date, etc.* maybe from text or file name.
+  * If the document is a pitch transcript, it might contain Q\&A or narrative – mark it as such.
+  * For any financial tables in text, we could mark their presence or later decide to parse numbers.
+  * This metadata will be stored in columns or a JSONB field in the Document record.
+* **Storing Raw Text:** Save the full extracted text (or chunks) in the database. This is useful for debugging and also for potential re-processing with improved prompts. We might store large text in an indexed text column (or a separate table if chunked).
+* **Linking to Deal:** All documents link to their deal. Once processed, we can aggregate content for the Deal Screener analysis. For example, after all files of a deal are parsed and stored, the next step is to **analyze the combined data**.
+
+The Document Ingestion Engine ensures all proprietary data is available for analysis in structured form. It is designed to be robust: whether a pitch arrives as a PDF with charts or a scanned paper, the system will attempt multiple strategies to get the content. In future, we can enhance it with more advanced parsing (e.g. using image recognition on charts or reading slide layouts), but initially focusing on text extraction and OCR is sufficient.
+
+### 2. Industry Content Ingestion
+
+To generate industry overviews and provide context, we need to continuously ingest **external content** (market reports, news, relevant articles). This builds an internal knowledge base that the AI can draw upon (using Retrieval-Augmented Generation):
+
+* **Sources of Industry Content:** Likely sources include:
+
+  * *News articles and press releases* about the sector or relevant startups.
+  * *Industry research reports* (PDFs, whitepapers).
+  * *Newsletter emails* (e.g. venture trends, housing market updates).
+  * *Regulatory filings or public datasets* if relevant (e.g. housing market data).
+* **Ingestion Methods:** We will combine manual and automated ingestion:
+
+  * Provide an interface for team members to upload or add content (just like adding to a library). For example, an analyst finds a relevant PDF report – they upload it via a “Content Repository” module (aligned with the **Content Generation Engine** module in the SOW).
+  * Set up scheduled fetches for known sources: e.g., integrate RSS feeds for specific industry blogs or Google Alerts for keywords. These feeds can be parsed with a cron job (Supabase doesn’t have cron by default, but we can use GitHub Actions or a simple external script triggering a function).
+  * Use an **email parsing workflow**: subscribe to newsletters with a dedicated email and forward those emails into the system. A tool (like Mailgun’s inbound parse) can hit a webhook with the email content. We then extract the text (strip HTML) and treat it as an article entry in the DB.
+* **Parsing & Embedding:** Similar to documents, we parse articles to plain text. Likely simpler (HTML to text) parsing using something like Readability or Unstructured. After parsing:
+
+  * Store the article text, title, author, date, source URL in an **Articles table**.
+  * Generate embeddings for the content chunks and store in vector index for retrieval.
+  * Tag or categorize the content by sector/topics (could use an AI classification to label content by theme, or keywords).
+* **Knowledge Base Structure:** All ingested industry content feeds into a **Knowledge Base** that can be queried. We might maintain a separate index or combine with document vectors. Likely we’ll have a `knowledge_content` table for all reference material (with type = article, report, etc.) and an associated vectors table.
+* **Usage in Analysis:** The Deal Screener can query this knowledge base for relevant info when analyzing a startup. E.g., if the startup is “proptech mortgage platform”, the system can do a similarity search for “mortgage proptech market size” in the content database and retrieve any relevant paragraphs (which GPT can incorporate into an “Industry Overview” section). This addresses the **Content Ingestion & Recall** feature requested.
+* **Maintaining Freshness:** We will implement a process to continuously update the knowledge base:
+
+  * Possibly a weekly cron job to ingest new content.
+  * Provide an admin UI for curating content (so team can remove outdated info or add new pieces).
+  * Over time, we could integrate APIs like LexisNexis or PitchBook for industry data, but initially, focus on publicly available info and internal research.
+
+### 3. Startup Directory / Market Map Ingestion
+
+The **Industry Innovation Database** (Module 6) aims to be a directory of startups in the housing/real estate tech space. In our architecture, this will be a structured database (tables for companies, sectors, etc.) that can be both manually maintained and AI-assisted:
+
+* **Schema for Directory:** Create a `companies` table with fields: name, website, sector, sub-sector, description, founded\_year, location, etc. This is essentially an internal Crunchbase. We can also have a `funding` table for funding rounds if desired later, but initially basic info.
+* **Data Population:**
+
+  * Start with companies that HTV is aware of or interested in. We can upload a seed list (CSV import or manual entry via an admin UI).
+  * Implement a **Company Ingestion Form** (as per SOW) where analysts can add a startup and fill in details. Also allow uploading a pitch deck here which ties into Document Ingestion.
+  * For automation, we might use external APIs: e.g., use the Crunchbase API or Clearbit to fetch company info by domain. However, licensing might be an issue. A compromise: use OpenAI to find info – for example, query GPT with the company name and ask for a one-liner description or sector. (Though GPT’s knowledge cutoff might limit accuracy for very new startups.)
+  * Another approach: leverage the **knowledge base** above. If we ingest news, many startups in our domain get mentioned. We can cross-reference article content to identify new company names and prompt an agent to gather details on them.
+* **Market Map Integration:** The directory will support filtering by vertical, stage, etc. We should design a **sector taxonomy** (e.g., categories like PropTech, ConstrucTech, FinTech for housing, etc., each with sub-categories). Each company entry can have a link to that taxonomy for easy grouping.
+* **AI-Augmented Data:** We can use OpenAI to generate certain fields:
+
+  * **Innovation Scoring:** As in SOW (Module 6) they mention an AI-generated innovation score. We could train a simple model or prompt GPT to rate a company on certain criteria (market potential, uniqueness, etc.) based on its description and any analysis done. This is optional for initial build; we might stub this out or use a formula until we refine it.
+  * **Competitor Cross-Referencing:** When a new company is added, we can find similar companies in the directory by comparing vectors of descriptions or looking at tags (or simply using the knowledge base search for related ideas). This helps populate that company’s profile with “related startups” (for competitive landscape).
+* **Integration with Deal Screener:** When running the Deal Screener on a new startup, the system will check if that startup exists in the directory:
+
+  * If yes, pull its profile (this gives sector classification, etc. which helps the analysis prompts).
+  * If not, the system (or user) can add it. Possibly, the act of screening a deal adds the company to the database with whatever info we glean.
+  * Also, during analysis, the system can fetch *other companies in the same sector* from the directory to inform the competitive landscape section.
+* **Security:** The directory might eventually be shared with LPs or external stakeholders (with limited views). For now, it’s internal. We’ll design the API with role checks so that if, e.g., a company profile is marked public, it could be accessed via a public page in the future. Initially, all data is private to the team.
+
+### Pipeline Orchestration & Scaling
+
+We will orchestrate the above ingestion processes with careful attention to performance:
+
+* Use asynchronous processing to handle large files without blocking user interaction. The UI will indicate processing status and results will appear when ready.
+* For Supabase: each file upload can directly invoke an Edge Function (Supabase allows HTTP triggers). Alternatively, use a Postgres LISTEN/NOTIFY or a job table: insert a row in `processing_queue` and have a dedicated worker (could be a persistent Supabase function or an external process) poll and process. Given our scale (likely a few documents at a time), simply invoking a serverless function per upload is fine.
+* If using AWS: S3 upload event can trigger a Lambda. Could also utilize AWS Step Functions for multi-step parsing (e.g., one step parse, next call OpenAI, etc.), but that might be over-engineering at this stage. A single Lambda can handle parse + OpenAI calls sequentially as long as runtime is within limits (with caching of large file in /tmp if needed).
+* **Logging and Monitoring:** All ingestion actions will be logged:
+
+  * In the database (e.g., a table `ingestion_logs` with document\_id, status, timestamp, errors).
+  * Additionally, we may integrate a logging service (Supabase provides logs for functions; AWS CloudWatch for Lambdas).
+  * We will capture OpenAI API usage data and errors for debugging (ensuring not to log sensitive content excessively).
+  * If using a tool like **Portkey** (which Flybridge used for logging AI agent steps), we can consider it for monitoring how prompts are performing. Otherwise, custom logging of prompt inputs/outputs (with PII masking) can help the “self-learning” aspect.
+
+With ingestion in place, we feed into the core AI analysis components below.
+
+## OpenAI Integration Strategy (AI Layer)
+
+All AI-driven functionality will be powered by OpenAI’s models, orchestrated in a way to maximize accuracy and relevance. The key techniques we’ll employ are **prompt engineering**, **retrieval-augmented generation (RAG)**, and selective **fine-tuning** where appropriate:
+
+### Prompt Design and Templates
+
+We will develop **structured prompts** for each task:
+
+* **Document Q\&A / Extraction Prompts:** To assist the Deal Screener, we’ll prompt GPT-4 to extract specific information from ingested text. For example: *“You are a VC analyst. Given the following pitch deck text, extract: 1) Founders’ names and backgrounds; 2) What the product does; 3) The target market and any size metrics; 4) any stated traction or financials; 5) identified competitors.”* The model’s response can be parsed or requested in JSON format (using the new function calling or output formatting capabilities of OpenAI) to structure the data. Using **function calling**, we can define a schema for the diligence data (with fields like founders, market\_summary, risks, etc.), and GPT-4 can fill it. This ensures the output of the AI is structured and easy to store.
+* **Analytical Prompts (Market Research):** For industry overview, competitor analysis, etc., we will craft prompts that incorporate retrieved content. E.g., *“Using the context below on the <FinTech lending> sector, summarize the industry’s size, growth, tailwinds, and key headwinds.”* followed by a few relevant snippets from the knowledge base (via RAG). This leverages the ingestion of industry content. We’ll maintain **prompt templates** for each section of the memo or report (Team, Product, Market, Competition, Risks, etc.), ensuring consistency in style and coverage.
+* **Memo Generation Prompt:** The memo generator will likely use a **large, single prompt** that includes an outline and the key data points to cover. For instance:
+
+  ```
+  You are an Investment Memo Generator AI trained to produce 5-8 page VC investment memos in HTV’s format. 
+  Use the information provided to write a comprehensive memo with the following sections: 
+  - Opportunity Summary 
+  - Team 
+  - Market Overview 
+  - Product/Technology 
+  - Business Model 
+  - Competition 
+  - Risks & Mitigations 
+  - Exit Scenarios.
+
+  Information:
+  - Company: ${Company Name}, founded ${Year}, raising ${Round}.
+  - Founders: ${Founder info from Deal Screener}.
+  - Product: ${Product summary}.
+  - Market: ${Market summary and size}.
+  - Competition: ${Competitor list and analysis}.
+  - Financials/Traction: ${any revenue, customer, growth data}.
+  - Relevant Market Research: ${snippets from knowledge base}.
+  - Exit Data: ${comps or typical multiples for sector}.
+
+  Write the memo in a formal, insight-driven tone, following our proprietary format and emphasizing the long-term vision. Use bullet points or subheaders where appropriate.
+  ```
+
+  This prompt (constructed dynamically for each deal) gives GPT-4 all needed info and clear instructions on structure and tone. We will refine it with few-shot examples if needed – e.g., include an excerpt from a past memo to demonstrate style or formatting, as long as it fits in the context window. The prompt will likely be quite large, but GPT-4’s 16k or 32k token context (if available) can handle it.
+* **Risk Profiling Prompt:** A specialized prompt can ask the AI to list risks in categories (market, operational, financial) given the context of the startup. This maps to the **Risk Profiling** feature. For example: *“List the top Market Risks, Operational Risks, and Financial Risks for this company, given its stage and sector. Provide 1-2 sentences explanation for each.”* The output can be structured as bullet points under each category.
+* **Iterative Refinement:** We plan to use a **chain-of-thought** approach for complex tasks where needed. For instance, for exit scenario modeling: first ask GPT to identify relevant comparable exits (maybe from knowledge base data), then in a second prompt have it estimate exit values under base/outlier/downside cases using those comps. Breaking tasks into steps can improve accuracy. These intermediate steps might or might not be shown to the user but help build the final content.
+
+We will maintain these prompt templates version-controlled, and parameterize them so that improvements can be made without code changes (possibly even stored in the database or a CMS for quick editing during testing).
+
+### Retrieval-Augmented Generation (RAG)
+
+To ensure outputs are **fact-based and up-to-date**, we will heavily utilize RAG:
+
+* The ingestion layer populates a **vector index** of all reference content (startup docs, industry articles, prior memos, etc.).
+* Before generating analyses or memos, the relevant function will perform a similarity search on this index to fetch the most pertinent pieces of information. For example:
+
+  * When preparing the Market Overview section for a **proptech startup**, search the knowledge base for “proptech market size” or the startup’s specific niche to retrieve any stats or trends, which are then inserted into the prompt context.
+  * For Competition, if the Deal Screener identified some competitors, we can search those names in our content DB to see if we have any news or data on them to include.
+* By feeding GPT concrete facts from our database, we reduce hallucinations and make the memos richer with real data. Essentially, GPT will act as a **reasoning engine** on top of our data repository, rather than relying on its potentially outdated training data.
+* The architecture to support RAG will include:
+
+  * A `match_documents` SQL function (similar to the pgvector example) or using the Supabase vector toolkit to query top-k similar texts for a given query embedding.
+  * In the code, before final prompt assembly, we’ll embed a query (like “<Company> market trend” or just use the deal’s description) and retrieve, say, 5 relevant text chunks. Those chunks are then concatenated (with separators and attributions if needed) into the prompt.
+  * We will ensure the prompt clearly delineates the provided context vs. the task, to help GPT attribute the info correctly. For instance: *“Context: \[Snippet 1] ... \[Snippet 5] \n Using this context, answer the following...”*
+* **Memory and Cross-Referencing:** Beyond static retrieval, as the AI processes a specific deal, we might store intermediate facts (like what GPT understood from the deck) and reuse them in later prompts. This is a sort of ephemeral memory. We can pass the AI’s own outputs from one step into the next step’s context if needed (validated for correctness by a quick check or by user review).
+* **Fallbacks:** If the knowledge base lacks information (e.g., a very novel market with no content), GPT will have to rely on general knowledge. We will design prompts to explicitly say “If you don’t have data, say that the data is limited” to avoid it making up numbers. Over time, as users notice gaps, they can add content to the knowledge base, so the system improves.
+
+### Fine-Tuning and Custom Models
+
+The system will initially use OpenAI’s off-the-shelf models with prompt engineering. However, we plan the following to improve and customize the AI:
+
+* **Fine-Tuning on Proprietary Memos:** We will gather our past investment memos and use them to fine-tune an OpenAI model (likely GPT-3.5 Turbo fine-tuning, since GPT-4 fine-tuning might be limited or very costly). The fine-tuning will teach the model our writing style, terminology, and structure. For example, we can fine-tune on pairs of (outline, full memo) or just on the text of memos with appropriate prompts, so the model learns the expected tone and format. This can make the Memo Generator’s first draft much closer to final. It was noted that the Flybridge tool’s output covers \~60% of the work—fine-tuning aims to increase that by aligning with our style. We must ensure to remove confidential info from training data or get permissions, as OpenAI fine-tune data may be reviewed by them (though they don’t use it beyond our model training).
+* **Domain-Specific Models:** If needed, we could explore other models for specific tasks:
+
+  * Using a smaller LLM (like Llama 2 fine-tuned) hosted privately for cheaper inference on frequent tasks (e.g., quick classification of a deal’s sector). This would keep costs down and avoid sending certain data outside. But given our preference for fully managed AI and given OpenAI’s performance, this is a later optimization.
+  * Using OpenAI function calling, we might not need a custom classifier for sector tagging – we can just ask GPT to classify into our predefined sectors.
+* **Iterative Training (Reinforcement):** The “Self-Learning System” aspect will be implemented by capturing edits/feedback on memos. Concretely:
+
+  * When a user edits a memo draft, we can diff the changes and store them. Over time, we compile these to see systematic biases or errors in AI output (e.g., maybe AI always underestimates market size, and we always correct it upward with actual data).
+  * We can periodically retrain or few-shot tune the model with these corrections. Alternatively, implement a **critic prompt**: after memo generation, run another GPT-4 query: “Compare the generated memo to the original data and list any inaccuracies.” This could catch inconsistencies for the analyst to review.
+  * Another feedback route is a star-rating or comment on the AI outputs that we log, then use to adjust prompts or training. For example, if an analyst marks the competitive analysis section as “weak,” we know to enhance that prompt or add more data next time.
+* **OpenAI API Usage:** All calls to OpenAI will be through secure server-side requests (with our API key stored securely). We’ll enable **data privacy** features – by default OpenAI does not use API data for training as of 2023, but we’ll double-check and possibly sign an OpenAI enterprise SLA for confidentiality if needed due to sensitive deal data being sent.
+* **Cost Management:** We will implement strategies to minimize token usage:
+
+  * Use GPT-3.5 for simpler tasks (extracting names, parsing text) and reserve GPT-4 for complex generation (memo drafting, nuanced analysis).
+  * Compress context: e.g., if a pitch deck is 30 pages, maybe first summarize each section with GPT-3.5, then send summaries to GPT-4 for the final report. This two-stage approach can drastically cut tokens while preserving salient info.
+  * Monitor token usage per request and set limits or batch operations where possible (OpenAI has 100 pages/minute embedding rate limits, etc., which we won’t hit early but good to be aware of).
+  * Possibly use embeddings to avoid re-sending large texts: e.g., for a given document, if we store an extracted summary, we might use that instead of raw text for generating an industry overview.
+* **Error Handling:** We must handle AI failures gracefully:
+
+  * If OpenAI API is down or returns error, our functions should catch it and either retry or return a meaningful message to the user (e.g., “Analysis is taking longer than expected, please try again in a few minutes.”).
+  * Use exponential backoff on rate-limit errors. And have a budgeting in place to not exceed monthly cost limits (maybe using OpenAI usage APIs or our own tracking).
+
+In summary, OpenAI is the intelligence layer that will *interpret* ingested data and *generate* outputs. We will treat it as a set of powerful but sometimes unpredictable functions – so we design robust prompts, incorporate our own data via RAG for grounding, and continuously refine through fine-tuning and feedback to align it with HTV’s needs.
+
+## Deal Screener / Underwriter Implementation
+
+The Deal Screener module automates what a junior analyst might do in early due diligence. We break its implementation into sub-components and outline the end-to-end flow:
+
+### 1. Triggering the Analysis
+
+When a new deal is being screened, the user will create a Deal record (via the UI form, entering basic info like company name, sector, etc.). Then they will upload documents (pitch deck PDF, etc.) and/or provide links (e.g. LinkedIn URLs for founders, company website). Once the relevant inputs are in, the user clicks “Run Deal Analysis” (or this could happen automatically after upload). This triggers the backend analysis function for that deal.
+
+### 2. Data Gathering & Enrichment
+
+Before calling the AI to produce a report, we gather as much structured info as possible:
+
+* **Parsed Documents:** From the Document Ingestion pipeline, we retrieve all extracted text from the deal’s documents. We may concatenate multiple sources: e.g., combine the pitch deck text, any notes from a call transcript, etc., into one large text blob or a collection of texts categorized by type.
+* **External Data Enrichment:** Using company name or provided links:
+
+  * If a LinkedIn profile URL for a founder is given, we call the Proxycurl API (or similar) to fetch profile details (education, titles, summary). If we don’t have an API, we might use a headless browser or Puppeteer to scrape a limited public profile page (though LinkedIn often blocks this, so API is preferred). This info is parsed into a structured format (we can directly store in a `founders` table or include in the AI prompt).
+  * If no LinkedIn provided, we could attempt a Google search via an API to find the founders’ profiles, but that adds complexity and potential inaccuracies. Probably better to require user to input founder names or LinkedIn if they want that detail.
+  * Pull basic company info: maybe use Clearbit or Crunchbase (if available) to get industry category, funding stage, etc. For MVP, the user’s input plus our directory might suffice.
+* **Knowledge Base Query (Competitive & Market):** We programmatically formulate a couple of queries to our content DB:
+
+  1. **Competitors:** If we know any competitor names (maybe mentioned in the pitch or input by user), search the knowledge base for those names to retrieve any articles or info on them (to use in comparing product features).
+  2. **Market Stats:** Use key terms from the company’s sector to find any market size or trend info. For example, if the company is in “3D printed homes”, search our articles for “3D printed homes market” or the sector “construction tech”. This yields data points to feed into the Industry Overview.
+  3. **Recent News:** Optionally, search news content for the company name itself or their product, to catch any press (could be none if very early, which is fine).
+* **Structural Data:** Prepare a JSON or in-memory object that will hold the analysis. For instance:
+
+  ```json
+  {
+    "company_name": "ABC Tech",
+    "description": "AI-driven mortgage platform...", 
+    "founders": [
+       {"name": "Jane Doe", "background": "Previous role at XYZ, MSc Computer Science..."},
+       {"name": "John Smith", "background": "Serial entrepreneur, founded ..."}
+    ],
+    "sector": "PropTech / Mortgage",
+    "product": "", 
+    "market": "",
+    "business_model": "",
+    "competition": [],
+    "risks": { "market": [], "operational": [], "financial": [] }
+  }
+  ```
+
+  We will fill in some fields directly (company\_name, sector from user input, founders from LinkedIn API). Others will be filled by AI. The structure corresponds to sections of the diligence report.
+* At this stage, we also decide on using either one single prompt to get all info or multiple prompts for each section. A hybrid approach:
+
+  * Use one **master prompt** asking for a full report in a structured format (as JSON or as Markdown with sections). GPT-4 can often handle this in one go if the context (pitch text + some retrieved snippets) is provided. The advantage is it sees everything and can cross-reference (e.g., mention team strength in summary).
+  * Alternatively, use multiple focused prompts: one for product analysis, one for market, etc., then assemble. This can sometimes yield higher quality in each part and allows using GPT-3.5 for some and GPT-4 for others to manage cost. We must ensure consistency though (the summary should not contradict the detailed sections).
+  * We might go with the single-pass approach initially with GPT-4, given it’s powerful, and fall back to sectional prompts if we encounter context length issues or need finer control.
+
+### 3. AI-Driven Analysis
+
+Now we call OpenAI with the prepared context:
+
+* **Prompt Assembly:** We construct a prompt (possibly a system + user message if using ChatCompletions API) that includes:
+
+  * A brief role instruction (system message): “You are a venture capital deal analysis assistant. You will receive various inputs about a startup and you will produce a structured diligence report. You have access to context from pitch decks, founder info, and market research.”
+  * Then the **user message** contains the context and the task. For example:
+
+    ```
+    Pitch Deck Text: """ [full text or key excerpts] """
+    Founder Profiles: 
+      - Jane Doe: [text from LinkedIn or bio]
+      - John Smith: [text from LinkedIn or bio]
+    Market Research:
+      - [Snippet 1 about market size]
+      - [Snippet 2 about trends]
+    Competitor Info:
+      - Competitor A: [snippet about competitor A]
+      - Competitor B: [snippet about competitor B]
+
+    Task: Analyze the information above and produce a comprehensive due diligence report with the following sections:
+    1. **Opportunity Summary** – A paragraph summarizing the company and why it could be promising.
+    2. **Team** – Founding team details and assessment.
+    3. **Market** – Industry overview including size, growth, tailwinds/headwinds:contentReference[oaicite:48]{index=48}.
+    4. **Product** – Product offering and how it compares to competition:contentReference[oaicite:49]{index=49}.
+    5. **Business Model** – How the company makes money (B2B/B2C, etc.), unit economics if mentioned.
+    6. **Competition** – Competitive landscape, competitors and feature comparison:contentReference[oaicite:50]{index=50}.
+    7. **Risks** – Key market, operational, financial risks:contentReference[oaicite:51]{index=51}.
+    8. **Other** – Any other pertinent findings (customer feedback, IP, etc.).
+
+    Provide the report in structured Markdown, using **bold** headings for each section. Use bullet points where applicable (especially under Team, Competition, Risks). Be concise but thorough. 
+    ```
+  * The above prompt uses info from our pipeline (which we substitute). We might also explicitly instruct it to incorporate the context facts and not hallucinate numbers.
+* **OpenAI Model Choice:** Use **GPT-4** for this generation to get high-quality, nuanced output. The content is important enough to justify GPT-4’s cost. If GPT-4 32k is available, it could take a lot of context; if not, we may summarize the pitch deck first to fit into \~8k tokens window.
+* **Processing the Response:** The AI’s response will be parsed. Since we asked for structured Markdown or JSON, it should be easier:
+
+  * If Markdown, we’ll parse by headings or known markers to fill our `analysis` object. E.g., find the “Team” section and store it, etc. (We can do this reliably since we control the format in the prompt).
+  * If we used JSON (via function calling), we’d directly get a JSON we can insert into DB. JSON might be safer for parsing, but Markdown is more readable if we want to display as is. We might opt for Markdown so the user can directly read the output as a nicely formatted report with bullet points, etc.
+* **Storing Diligence Report:** Save the final structured report to the database:
+
+  * We can have a `deal_analysis` table keyed by deal\_id with columns for each section (team\_text, market\_text, etc.), or simply store the Markdown in a `report` TEXT column for that deal. Storing individual fields allows future filtering (e.g., run queries like “find all deals where market\_tailwind contains X”), but it’s not critical initially. We could also store it as JSON in a JSONB column for flexibility.
+  * Also mark the timestamp, and perhaps the OpenAI model used, prompt version, etc., for record-keeping.
+
+### 4. Output and User Review
+
+The generated diligence report is then:
+
+* Displayed on the UI for the user to review. They can edit it if needed (though it’s more likely they’d edit the memo rather than this internal report, but providing an edit option can help corrections).
+* The user’s edits could be saved (maybe keep the original AI output and the edited version).
+* At this stage, the analyst might spot if something is missing or incorrect:
+
+  * If missing, they might upload more data or input clarification and re-run analysis.
+  * If incorrect, that feedback will be captured (noting what was wrong for future AI tuning).
+* This report is also accessible by other modules (e.g., Pipeline Management Dashboard can show a “Deal Summary Panel” with key insights from this report).
+
+### 5. Additional Features in Underwriting
+
+Beyond the core narrative, the Deal Screener can include some automated outputs:
+
+* **Scoring/Rating:** We could have the AI or a simple algorithm score the deal on various aspects (team, market, product) and perhaps an overall score. The SOW mentions a “signals” stage and thesis fit scoring – some of that could be derived from this analysis (like if certain keywords appear, etc.). This is a nice-to-have; we can leave hooks for it (e.g., an empty field in DB for “AI\_recommendation\_score”).
+* **Follow-up Questions:** The Flybridge example generated follow-up questions for diligence. We can similarly prompt GPT: *“List 5 follow-up questions an investor should ask given the above information.”* and provide that to the team to guide next steps. This adds value by leveraging AI to identify gaps.
+* **Comparison to Past Deals:** If our system has many deal reports, we could retrieve similar deals (via vector similarity on descriptions) and let the AI compare. For instance, “This startup is similar to X we saw last year; difference in go-to-market is ...”. This might be advanced, but we can plan for it by storing deal analysis embeddings.
+* **Report Export:** Let the user export the diligence report as PDF or Word if needed. This can be done by converting the Markdown to PDF (maybe using a library or a headless browser to print to PDF). Not a priority, but easy to add with tools like `marked` (Markdown to HTML) and `puppeteer` (HTML to PDF).
+
+Overall, the Deal Screener implementation will greatly reduce the grunt work of reading docs and Googling background info. By combining document parsing, automated web data pulls, and GPT’s analytical abilities, we deliver a comprehensive first-draft diligence report on any new deal in a matter of minutes.
+
+## Memo Generator Implementation
+
+With the structured outputs from the Deal Screener, the Memo Generator module will produce a polished investment memo draft. Implementation is as follows:
+
+### 1. Memo Template and Training Data
+
+First, we will establish the **memo format** that HTV uses. If there’s an existing template (Word or Google Doc outline used historically), we will encode that structure into our generation prompt and possibly fine-tune on examples. Key sections likely include:
+
+* Introduction / Thesis Summary
+* Company Overview (what the company does, current status)
+* Market Opportunity (market size, trend)
+* Product/Tech (and innovation)
+* Business Model / Monetization
+* Competition Landscape
+* Team Background
+* Investment Merits (the positives, why invest)
+* Risks and Mitigations (what could go wrong and how to manage)
+* Exit Prospects (possible exit strategies, comps)
+
+We’ll confirm the desired sections with the team and their typical ordering. We will also gather **proprietary memos** (redacted if needed) to use as style examples. These can be used in two ways:
+
+* As **few-shot exemplars**: include a short excerpt from a past memo in the prompt, e.g. “Below is an example of our memo style for a different company...\n\[Excerpt]”. This can guide tone and depth.
+* For **fine-tuning**: As mentioned, we intend to fine-tune a model (likely GPT-3.5) on our memos. The training might consist of prompt: “Write an investment memo for \[Company X] given \[key points]” and completion: “\[Full memo text]”. Or even simpler, feed the raw text of memos to imbue the model with writing style. Fine-tuning could allow using the fine-tuned model for initial drafts at lower cost, then perhaps a final touch by GPT-4.
+
+### 2. Draft Generation Process
+
+The memo generation can happen in one of two ways technically:
+
+* **One-Shot Generation:** Construct one giant prompt with all necessary info and ask GPT-4 to output the entire memo (as done in Deal Screener, but in more narrative form). This is straightforward but we need to be mindful of token limits and factual consistency (GPT might mix things if not carefully prompted).
+* **Section-by-Section Generation:** Break the task: generate the Opportunity Summary first, then Market section, etc., and concatenate. This allows using specialized prompts per section (maybe even different models, e.g., use GPT-3.5 to generate a first pass on a simpler section like Team background summary, then GPT-4 for nuanced sections). It also allows parallelization in theory, but sequential might be fine. The downside is potential redundancy or loss of global coherence. We can mitigate by feeding the previously generated sections as context for the next sections.
+
+We will likely attempt the **one-shot approach** initially with GPT-4 16k context. The prompt will incorporate:
+
+* All sections of the Deal Screener report (Team, Market, etc.). These can serve as raw material for the memo. However, the memo should not just copy them; it should rephrase in a narrative and persuasive style.
+* Retrieved knowledge base info for any gaps. E.g., include a snippet of a relevant recent event (“last month a competitor raised funding – which could be a paragraph in the memo’s competition section”) if not already in the analysis.
+* An instruction to ensure the memo includes an “Exit Scenario” analysis with any data we have on comps. If we have a small database of historical exits by sector (we might prepare that manually for now), we’ll include a few data points like “In this sector, recent exits: CompA acquired \$500M (10x revenue), CompB IPO \$1B (8x revenue)” as context so GPT can refer to it.
+* Tone and length guidance (“Aim for about 6 pages of content, use clear subheadings, etc.”). Possibly instruct model to output in Markdown or a simple markup so we can easily format.
+
+After generation:
+
+* **Post-Processing:** Convert the Markdown to a nicer format if needed. We can use a Markdown renderer to show it in the web app. If needed, generate a PDF. But for initial version, showing the text in the browser might suffice.
+* Check for any missing pieces. If the AI left a section blank (maybe it lacked info), we could highlight that for the user (“Team: \[information not available]”) so they know to fill it.
+
+### 3. Human Review and Feedback Loop
+
+The generated memo is then shown in an **editor UI**. The investment team will review every memo (as these are high-stakes documents). Key features here:
+
+* **Editing:** They should be able to edit text freely, add or remove content. We’ll likely implement a rich-text editor (maybe TipTap or Quill for a Word-like experience, or even allow export to Word if they prefer editing there).
+* **Version Control:** Save versions of the memo – the first AI draft and the final edited version. This helps track how much AI vs human contributed, and serves as training data (the delta can be turned into fine-tuning examples). We can implement a simple versioning by saving a copy on each “Publish” or allowing user to press “Save Draft”.
+* **Feedback Prompting:** We might include a quick survey after the edit: “How useful was the AI draft?” with a rating, to capture subjective feedback.
+* **Improvement Integration:** Suppose the user heavily rewrote the “Market” section because the AI’s data was outdated. The system can detect that (via comparing to the analysis data maybe) and suggest updating our knowledge base or adjusting the prompt next time. We can incorporate a mechanism where certain triggers (like user replaced a number GPT gave with another number) leads us to log a potential correction to feed into the model later.
+* Over time, as the system improves, we expect the human edits to decrease. The goal is the AI handles more of the heavy lifting and the humans just fine-tune language or add judgment where needed.
+
+### 4. OpenAI Fine-Tuning for Memo Style
+
+Once we have a handful of AI-generated memos and their edited counterparts, we will create a fine-tuning dataset:
+
+* For GPT-3.5, OpenAI allows fine-tuning with a few hundred examples. We might not have that many memos, but even <50 could be useful to adjust tone (though GPT-3.5’s quality is lower, it could still serve for quicker drafts).
+* Another strategy is to use **LoRA** or other fine-tuning on an open model with our memos if needed locally, but given the platform is fully OpenAI-powered, we stick to their fine-tune for now.
+* If fine-tuning is successful, we could then use the fine-tuned model for memo generation instead of the base model + prompt. Or use it in a cascade: fine-tuned model generates draft, GPT-4 does a refining pass on it.
+
+### 5. Continuous Learning
+
+Every new memo (and outcome of the investment) can be looped back:
+
+* If down the line we know the outcome (successful exit vs failure), that data could train a model to predict success indicators. That’s beyond our current scope, but something to keep in mind (the data we gather is valuable).
+* The system could detect if certain phrases or sections appear in all our memos (like “Our investment thesis is that ...”), and template-ize them, so the AI uses consistent phrasing.
+
+In terms of implementation, the Memo Generator heavily overlaps with the Deal Screener in using OpenAI and the knowledge base. The main difference is it aims for a polished narrative rather than just facts. By structuring the development in this way (first get structured facts, then craft narrative), we ensure the memos are grounded in data.
+
+Additionally, we will incorporate any specific **branding or formatting** preferences:
+
+* For example, if memos are usually in PDF with a cover page and firm logo, we can generate a PDF and use a template cover. This might be a finishing step outside of AI (just formatting).
+* If memos require charts or tables (maybe an exit scenarios table), we might prepare those manually or with small code. E.g., if we have some numbers, we could auto-generate a simple chart (using a JS library) and include it in the PDF. That might be phase 2, though.
+
+For now, a successful implementation will output a well-structured text document covering all key areas an investor memo needs, pulling in the analysis done and additional context to strengthen the investment rationale and flag risks.
+
+## Backend Data Schema
+
+Designing a clear database schema is critical to manage all the information. Below is a proposal for the key tables and their relationships (assuming a SQL schema in Postgres):
+
+* **users** – stores user accounts (if using Supabase Auth, this is largely handled, with fields id (UUID), email, etc.). We can extend with role (admin, analyst) if needed.
+* **deals** – each deal or target company being evaluated.
+
+  * `id` (PK), `company_name`, `company_website`, `sector` (FK to sector taxonomy table), `stage` (text or enum, e.g. “Seed”, “Series A”), `created_by` (FK to users), `created_at`.
+  * Possibly fields like `status` (Open, Decided, etc. if integrating pipeline stage).
+  * We might also store latest memo\_id or analysis\_id here for quick access.
+* **documents** – each uploaded file.
+
+  * `id` (PK), `deal_id` (FK), `file_name`, `file_type` (PDF, DOCX, etc.), `storage_path` (where it’s stored in bucket), `parsed_text` (maybe TEXT or TEXT\[] if chunked), `parsed_json` (JSONB for structured data like tables if any), `processed` (boolean flag), `uploaded_at`.
+  * We might not store full text here if large; could offload to a `document_chunks` table. But with Postgres, a TEXT can hold it; just be mindful of very large docs (we can chunk in code and perhaps store an array of texts).
+* **document\_vectors** – if we decide to have a separate table for embeddings (instead of embedding column in documents).
+
+  * `doc_id` (FK to documents), `chunk_index`, `embedding vector(1536)`, `text_excerpt`.
+  * This would be used for vector search on document content. Alternatively, we store `embedding` in documents table (one per doc if we embed the whole thing). But better to have multiple smaller chunks for accuracy. We’ll also need to store vectors for knowledge content and perhaps treat them in one combined table or separate tables with a union in query.
+* **articles** – for industry content (news, research).
+
+  * `id`, `title`, `content_text`, `source` (url or publication name), `published_date`, `ingested_at`.
+  * Could have `sector` tag or keywords.
+* **article\_vectors** – store embeddings for articles (similar structure to document\_vectors).
+
+  * `article_id`, `embedding vector(1536)`, `text_excerpt`.
+  * If using pgvector, we can index these for fast similarity search.
+* **companies** – the startup directory.
+
+  * `id`, `name`, `website`, `sector` (FK to sector table), `description`, `year_founded`, `location`, `last_funding_round`, `last_funding_amount`, etc. (We can add fields as needed to capture what’s useful).
+  * Possibly `source` (how this entry was added: manual vs via deal vs imported).
+* **founders** – (optional) founder profiles linked to companies.
+
+  * `id`, `company_id`, `name`, `title` (e.g. CEO), `linkedin_url`, `bio` (text summary).
+  * If we parse LinkedIn, fill bio, education, etc., here.
+* **deal\_analysis** – results of Deal Screener for a deal.
+
+  * `deal_id` (PK if one-to-one with deals, or separate id with deal\_id FK), `summary` (text), `team_analysis` (text), `market_analysis` (text), `product_analysis` (text), `business_model` (text), `competition_analysis` (text), `risks_analysis` (text), `analysis_json` (JSONB of full structured data, could include things like list of competitors or risk ratings).
+  * We also store `created_at`, `model_used`, maybe `analysis_version`.
+* **investment\_memos** – stores memos generated.
+
+  * `id`, `deal_id`, `memo_text` (could be long, but we can store as text or even as PDF binary if we generate a PDF – but text is easier for search and fine-tune usage), `created_at`, `created_by` (user who triggered it), `edited_by` (last editor), `edited_at`.
+  * We can also store a separate `memo_html` or so if formatting is needed, or keep it in Markdown in the text field.
+  * If versioning, we might have a separate table `memo_revisions` with each edit.
+* **knowledge\_tags / sectors** – reference tables for taxonomy.
+
+  * `sector` table with entries like (“FinTech”, “PropTech”, etc.), and possibly a hierarchy if needed (like sector and sub-sector).
+  * `article_tags` linking articles to sectors, and `company_sector` linking companies to sectors (if many-to-many).
+* **feedback** – table to capture feedback and usage metrics (optional).
+
+  * Could log each OpenAI call with prompt hash, model, and maybe a user rating later.
+  * Or log user feedback on memos (rating scale, comments).
+  * This is more for internal improvement process.
+
+**ER relationships:** A `deal` can have many `documents`, one `deal_analysis`, many `investment_memos`. A `company` (in directory) can have many `deals` associated (though typically one company per deal unless you screen same co twice). `company` has founders, and tags. `article` can tag to multiple sectors or companies if they mention them (we could even parse articles to link to companies mentioned, which would enrich our DB linking).
+
+We will enforce relational integrity with foreign keys and use indexes on important query fields (e.g., index company\_name, sector for quick search, maybe a full-text index on content\_text of articles if needed separate from vector search).
+
+**Vector storage:** If using **Supabase pgvector**, the schema will include:
+
+```sql
+CREATE EXTENSION vector;
+CREATE TABLE document_chunk_vectors (
+   id bigserial primary key,
+   deal_id bigint,
+   content_source TEXT, -- e.g. 'pitch_deck', 'article'
+   content_id bigint,   -- id of the document or article
+   chunk_index int,
+   chunk_text text,
+   embedding vector(1536)
+);
+-- Index for vector similarity
+CREATE INDEX ON document_chunk_vectors
+USING ivfflat (embedding vector_cosine_ops)
+WITH (lists = 100);
+```
+
+We might unify documents and articles in one table like above for simplicity of search across all knowledge, distinguished by content\_source. Or separate tables for each and search them separately.
+
+The database will also be the integration point for our app and any analytics. For example, pipeline dashboard (Module 3) can query deals by stage, which would be a field in deals or a separate pipeline table with deal\_id and stage.
+
+We will leverage **Supabase Row-Level Security (RLS)** on tables to ensure only authorized users can read/write (if multi-tenant, add org\_id columns; if just internal, we still use RLS to ensure only logged-in users can access, but all internal users likely share everything). Supabase Auth gives us user UUIDs to link to created\_by fields.
+
+## API Design for Frontend/Backend Communication
+
+We will design a set of RESTful (or GraphQL) endpoints for the front-end to interact with the system. Using REST for concreteness, with an `/api/` prefix (if Next.js API routes) or a standalone Express (if we go that way) or directly via Supabase client (which calls PostgREST). Key API routes and their purpose:
+
+* **Authentication:** If using Supabase, front-end will handle auth via Supabase JS (email/password login, etc.), no custom API needed. If using custom, we’d have `/api/login` etc., but likely not needed.
+* **Deals:**
+
+  * `POST /api/deals` – Create a new deal. Body: company name, sector, etc. Response: deal ID. (Alternatively, we let creating a deal be implicit when uploading first doc, but explicit is clearer.)
+  * `GET /api/deals/:id` – Fetch deal details, including any analysis or memo summary. This can populate a deal detail page.
+  * Possibly `GET /api/deals` for list (with filters by stage, etc., for pipeline view).
+* **Documents:**
+
+  * `POST /api/deals/:id/documents` – Upload a document for a deal. This could be handled by direct file upload to storage (to minimize load on our API). Another pattern: create a pre-signed URL and return to front-end to PUT the file. With Supabase, we can call `supabase.storage.from('docs').upload('deal123/pitch.pdf', file)` directly from front-end, then call a function to process.
+  * `GET /api/deals/:id/documents` – List documents and their status (processed or not).
+  * We might not need a GET endpoint for the file itself (Supabase provides a way or we serve via Nginx if self-hosted).
+* **Trigger Analysis:**
+
+  * `POST /api/deals/:id/analyze` – Kicks off the deal screening analysis. This will call the back-end function to gather data and call OpenAI. We might implement it as an **edge function** that runs asynchronously. The endpoint can immediately respond with a job ID or just a 202 Accepted. The front-end will then subscribe for the result.
+  * Alternatively, make it synchronous: the API call waits and returns the analysis JSON when done. If using GPT-4 with large input, this could take, say, 20-30 seconds, which might be near timeout limits for some environments. We might choose async for safety: respond OK quickly and have the client poll `GET /api/deals/:id/analysis_status` until ready.
+* **Analysis Results:**
+
+  * `GET /api/deals/:id/analysis` – Retrieve the structured diligence report (maybe returns the Markdown or JSON). This is used by the UI to display the report. If analysis is not ready, could return 404 or a status field indicating pending.
+* **Memo Generation:**
+
+  * `POST /api/deals/:id/generate_memo` – Trigger the memo creation. Similar considerations as analysis: possibly async. Likely can be done synchronously if we are confident it’s under, say, 60s.
+  * `GET /api/deals/:id/memo` – Get the latest memo (or we include memo in deal details). If multiple memos (versions), we might have an ID.
+  * If the user edits the memo and wants to save: `PUT /api/memos/:id` to update with edits (or a different endpoint if we treat memos as separate resource).
+* **Knowledge Base:**
+
+  * `POST /api/content` – Add a piece of content (for admin use, e.g. upload an industry PDF or paste an article link). This would trigger parse & embed similarly to documents. We might reuse the same pipeline or have a separate function since it’s not tied to a deal.
+  * `GET /api/content/search?q=` – Could allow searching the knowledge base. But internally, the system does vector search for AI. We might expose a simple search for users to manually look up things (maybe an advanced feature for power users).
+* **Startup Directory:**
+
+  * `GET /api/companies?sector=X` – List companies, possibly for building the market map UI.
+  * `GET /api/companies/:id` – Company profile info.
+  * `POST /api/companies` – Add a new company (from admin form or via a deal creation which might auto-add).
+  * If we integrate with deals, when a deal is created, we might automatically create a company entry if one doesn’t exist, linking data.
+* **Pipeline & Portfolio (Future):** Not our focus now, but our architecture will allow adding endpoints like `PUT /api/deals/:id/stage` to update pipeline stage, etc.
+
+**Using Supabase Directly:** Since Supabase provides a JS client, the front-end could bypass custom APIs for basic CRUD:
+
+* e.g., `supabase.from('deals').select('*')` to get deals. This is convenient but the downside is you embed SQL queries in front-end and rely on RLS for security. It’s okay for simple things and speeds development. For complex actions (analysis, memo gen), we definitely need server-side functions.
+* We can mix approach: use Supabase client for basic data (which respects RLS and uses user’s JWT), and call our own endpoints for the heavy AI tasks.
+
+**Response Formats:** We will use JSON for API responses. E.g., GET analysis could return:
+
+```json
+{
+  "deal_id": 123,
+  "status": "completed",
+  "report_md": "# Opportunity Summary\n ... \n## Team\n ...",
+  "report": { "summary": "...", "team": "...", ... } 
+}
+```
+
+We include either the rendered markdown or structured fields. The front-end can either directly render markdown to HTML or break into sections for a nicer UI.
+
+**Error Handling:** API should handle and return informative errors:
+
+* If OpenAI call fails, `POST /analyze` might return 500 with message "AI service error, please retry."
+* If user tries to generate memo without an analysis done, return 400 "analysis not ready".
+* Auth errors handled by supabase (like 401 if not logged in, due to RLS or missing JWT).
+
+**API Security:**
+
+* All endpoints require authentication. If using Supabase’s auto API, RLS ensures a user can only operate on their deals. If single-tenant (only HTV team), we still secure it but likely all users have access to all deals. Possibly implement role check if there are different user levels.
+* Rate limiting: To prevent abuse (maybe not an issue if internal use only), but if opening to founders as Flybridge did, we’d want to limit how many analyses can be run per minute to control cost. We can implement simple rate limit middleware or use Vercel’s edge middleware.
+* API keys: Our serverless functions (e.g. Supabase Edge Functions) will have the OpenAI API key injected via environment variable. That key is never exposed to front-end. The front-end only uses Supabase anon key (which is safe with RLS) or the user’s JWT.
+
+## Example Code Snippets
+
+Below are some illustrative code snippets for critical parts of the system:
+
+* **Parsing a PDF and Generating Embeddings (Node.js Example)** – this could be part of the ingestion function:
+
+  ```js
+  import pdf from 'pdf-parse';
+  import { createClient } from '@supabase/supabase-js';
+  import { Configuration, OpenAIApi } from 'openai';
+  import * as fs from 'fs/promises';
+
+  // Supabase and OpenAI setup
+  const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+  const openai = new OpenAIApi(new Configuration({ apiKey: OPENAI_KEY }));
+
+  async function processDocument(filePath, dealId) {
+    const dataBuffer = await fs.readFile(filePath);
+    let text;
+    try {
+      const data = await pdf(dataBuffer);
+      text = data.text?.replace(/\uFFFD/g, ''); 
+      if (!text || text.trim().length < 50) throw new Error("PDF parse empty");
+      console.log("Text extracted via pdf-parse");
+    } catch (err) {
+      console.warn("pdf-parse failed, trying OCR...");
+      // Fallback to OCR (using an OCR library or external service)
+      text = await runOCR(filePath);
+    }
+    text = text.trim();
+    // Split into chunks 
+    const CHUNK_SIZE = 1000;
+    const chunks = [];
+    for (let i = 0; i < text.length; i += CHUNK_SIZE) {
+       chunks.push(text.substring(i, i+CHUNK_SIZE));
+    }
+    // Embed each chunk and store
+    const { data: embeddings } = await openai.createEmbedding({
+       model: 'text-embedding-ada-002',
+       input: chunks
+    });
+    const vectors = embeddings.map((emb, idx) => ({
+       deal_id: dealId,
+       content: 'deal_doc', 
+       chunk_index: idx,
+       embedding: emb.embedding 
+    }));
+    // upsert into Postgres (using Supabase client)
+    const { error } = await supabase.from('document_chunk_vectors').insert(vectors);
+    if (error) throw error;
+    // Also store raw text (optional)
+    await supabase.from('documents').update({ parsed_text: text, processed: true }).eq('id', fileRecordId);
+  }
+  ```
+
+  This snippet outlines reading a file, extracting text (with fallback), splitting, embedding, and storing in the database. In practice, we’d add error handling around OpenAI calls, and perhaps use batched insertion for vectors.
+
+* **Similarity Search Query (pgvector)** – example SQL to find relevant content:
+
+  ```sql
+  SELECT content, similarity 
+  FROM match_documents(${queryEmbedding}::vector, 0.8, 5);
+  ```
+
+  (Using the function from earlier). If using Supabase JS, we could call an RPC that wraps this.
+
+* **OpenAI Prompt Construction & Call (Pseudo-code):**
+
+  ```js
+  const systemPrompt = "You are an AI that produces venture investment memos...";
+  const userPrompt = `
+    Here is data about a startup:
+    ${analysisText} 
+    Write a memo... (instructions)
+  `;
+  const completion = await openai.createChatCompletion({
+    model: "gpt-4",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ],
+    temperature: 0.7
+  });
+  const memoDraft = completion.data.choices[0].message.content;
+  ```
+
+  This shows how we’d send a chat completion request with our compiled prompts. We’d likely set `temperature` low for factual stuff (analysis) and maybe a bit higher for memo to encourage a more narrative style, though still relatively controlled (0.7 or so).
+
+* **Post-processing Markdown to PDF (Node example using a library):**
+
+  ```js
+  import { remark } from 'remark';
+  import html from 'remark-html';
+  import { readFile } from 'fs/promises';
+  import puppeteer from 'puppeteer';
+
+  const mdContent = memoDraft;
+  const result = await remark().use(html).process(mdContent);
+  const htmlContent = result.toString();
+  // Wrap in basic HTML template with styles
+  const fullHtml = `<html><head><style> 
+      body { font-family: Arial, sans-serif; } 
+      h2 { color: #333; } 
+      </style></head><body>${htmlContent}</body></html>`;
+  // Use Puppeteer to generate PDF
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.setContent(fullHtml);
+  await page.pdf({ path: 'memo.pdf', format: 'A4' });
+  await browser.close();
+  ```
+
+  This would generate a PDF file from the memo content. We could then upload that to storage or send to user. (Alternatively, we skip PDF generation and let user do it.)
+
+These code snippets are simplified and for illustration; actual implementation will consider streaming responses for large content (OpenAI streaming API can show partial results to user), proper error catching, and optimizing chunk sizes and API usage.
+
+## Security and Access Control
+
+Security is paramount since we are dealing with sensitive confidential data (startup decks, internal analyses). The architecture includes multiple layers of security:
+
+* **Authentication:** We will use Supabase’s built-in email/password auth (with the option for SSO or OAuth in future). Users (HTV team members) will each have accounts. The JWT issued by Supabase will be used to authenticate API requests. On the frontend, we’ll use the Supabase auth client or NextAuth. All pages and API routes will require a valid login (we’ll have a login page, and use Next.js middleware to protect routes if needed).
+* **Authorization & Data Isolation:** With Supabase, we will enable Row-Level Security on all tables and write policies. Initially, all users belong to the same organization (HTV), so we might not need to segregate by org yet. However, it’s good practice to include an `org_id` on key tables in case in the future, if this platform is offered to other VC firms or external collaborators, we can isolate data. RLS policy example:
+
+  ```sql
+  create policy "deal access" on deals
+  for select using ( auth.uid() = created_by );
+  ```
+
+  But if all HTV users should see all deals, we might have a role or just allow if same org. We’ll still put RLS to prevent any access without a logged-in user.
+* **Storage Security:** Documents and memos are stored in private buckets. Supabase storage allows defining bucket policies – we will ensure the bucket is “authenticated read/write” only. The front-end either gets a signed URL for a file or we route it through our API which checks permissions and then streams the file. On AWS S3, we’d similarly keep buckets private and use presigned URLs for download when needed. This prevents random internet users from guessing URLs to sensitive pitch decks.
+* **API Security:** All custom API endpoints (Edge Functions or Next.js API routes) will verify the user’s token. In Supabase Edge Functions, the JWT and user identity can be verified via Supabase’s JWT secret. We will make use of that to ensure the caller is authorized and potentially do role-check (like only an “admin” role user can add knowledge base content, etc.).
+* **Network Security:** Vercel and Supabase handle TLS (HTTPS) by default, so data in transit is encrypted. For internal components on AWS, we’d ensure Lambdas and S3 etc. also require SSL. If self-hosting any part, we’d use SSL certs.
+* **Data Encryption:** The database (Supabase Postgres) is encrypted at rest by the provider. We will rely on that. If we were managing our own Postgres on AWS, we’d enable storage encryption. For an extra layer, extremely sensitive fields (none identified yet, but say founder personal info) could be encrypted in application before saving. Not doing that initially, since our usage is internal and limited.
+* **Secret Management:** API keys (OpenAI, Proxycurl, etc.) will be stored in environment variables on Vercel and Supabase (both provide encrypted storage for secrets). They will **not** be committed to code. Access to these in the team will be limited. If using AWS, use AWS Secrets Manager or Parameter Store for keys and ensure Lambda has access only to needed secrets via IAM roles.
+* **OpenAI Data Privacy:** We will opt-out of OpenAI retaining data (OpenAI states API data is not used for training as of 2023-03-01, but we can also sign the data processing agreement for added assurances). If particularly sensitive, consider using Azure OpenAI which keeps data within instance – but likely not needed for now.
+* **Audit Logging:** Implement logging of key actions:
+
+  * User logins (Supabase might handle part of this).
+  * Document uploads and downloads (we can log who accessed what document when, to have an audit trail in case of a leak).
+  * AI generation events (to monitor misuse or unusual activity).
+  * These logs can go to a secure table or external log management (perhaps Logflare or a self-hosted ELK stack if needed).
+* **Rate limiting & Abuse:** Since system is internal to HTV at first, abuse is unlikely. But if we later allow external usage (like Flybridge letting founders generate memos), we must add rate limits to prevent someone from spamming our OpenAI API. This can be done by checking the number of requests per user per minute in the function and rejecting if above threshold, or use a platform feature (Cloudflare, etc.).
+* **Input Validation:** All user inputs (file uploads, text fields) will be validated:
+
+  * Only allow certain file types for upload (PDF, docx, xls, txt). Avoid executable or dangerous files. On upload, we can scan files for viruses (Supabase doesn’t automatically, but we could integrate a virus scan service or use ClamAV on the server function).
+  * For text inputs (like company name or descriptions), sanitize to prevent any injection attacks on our queries or XSS on output. Using parameterized queries and encoding output properly (for web) prevents most issues. Since we’ll display AI outputs, we should also be cautious of any prompt injection via user-supplied content – e.g., a malicious PDF that contains text that tries to trick the AI into revealing system prompts. We will use techniques like removing weird tokens and perhaps in the prompt tell the AI to ignore instructions found in documents. This is a new kind of security concern (LLM prompt security).
+* **Authorization of AI Actions:** If we integrate agent tools (like letting AI call web search), we should sandbox that. Currently, our design is mostly retrieval from our DB and calls to OpenAI, so no direct internet access by the AI agent beyond what we allow.
+* **Infrastructure Security:** If we had a custom server, ensure OS patches, etc. But with Vercel/Supabase, much is managed. If AWS, configure IAM roles with least privilege (e.g. Lambda can only read specific S3 bucket, not all buckets; database user accounts with principle of least privilege).
+* **Backups and Recovery:** Ensure database is backed up (Supabase does nightly backups by default). For AWS RDS, enable automated backups. This is more reliability than security, but important for not losing data. Similarly, documents in storage should have versioning or backups (especially since we may annotate them or rely on them).
+* **Compliance:** While not strictly a security feature, we should be mindful of any privacy laws. If we store personal data (founder names, etc.), ensure we handle it in accordance with privacy policy. Likely fine as it’s internal research use. If the system expanded to store personal data of LPs or such (Module 7 CRM), we’d need to protect that too.
+
+By implementing these measures, we aim to create a secure environment where sensitive information on startups and investment decisions is protected. We will conduct a threat model review to see if any vector (like prompt injection, data leakage via OpenAI, etc.) needs additional mitigation.
+
+---
+
+**Conclusion:**
+
+This implementation plan provides a detailed roadmap for building HTV’s venture capital operating system modules: a Deal Screener that automates data ingestion and analysis into a structured diligence report, a Memo Generator that produces full investment memos from that analysis, and an underlying data ingestion layer that continuously feeds the platform with relevant knowledge. We have outlined a system architecture leveraging a modern stack (Next.js frontend on Vercel, Supabase/AWS backend) and OpenAI’s advanced language models to power AI features.
+
+By following this plan – setting up the database schema, building ingestion pipelines for documents and content, integrating OpenAI carefully with prompt engineering and retrieval, and enforcing strong security practices – the development team can confidently start implementing the system. The result will be a powerful, custom solution that streamlines HTV’s workflows, turning raw data into insights and polished outputs in a fraction of the time, while continuously learning and improving from user feedback.

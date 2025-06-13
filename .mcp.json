@@ -1,0 +1,22 @@
+  {
+    "mcpServers": {
+      "firecrawl-mcp": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "firecrawl-mcp"
+        ],
+        "env": {
+          "FIRECRAWL_API_KEY": "fc-09acc9e5ca6e49fcb9369331591e0036"
+        }
+      },
+      "playwright": {
+        "command": "npx",
+        "args": [
+          "@playwright/mcp@latest",
+          "--config",
+          "/mnt/c/Users/charl/StudioProjects/Neurovo/neurovo/playwright-config.json"
+        ]
+      }
+    }
+  }

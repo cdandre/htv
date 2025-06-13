@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-      model: 'gpt-4o',
+      model: 'gpt-4.1',
       input: `
 You are an expert venture capital analyst evaluating a potential investment opportunity.
 

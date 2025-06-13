@@ -13,13 +13,13 @@ interface PipelineChartProps {
 }
 
 const stages = [
-  { id: 'thesis_fit', name: 'Thesis Fit', color: 'from-slate-400 to-slate-600', lightColor: 'bg-slate-100 dark:bg-slate-900/30' },
-  { id: 'signals', name: 'Signals', color: 'from-blue-400 to-blue-600', lightColor: 'bg-blue-100 dark:bg-blue-900/30' },
-  { id: 'validation', name: 'Validation', color: 'from-yellow-400 to-amber-600', lightColor: 'bg-yellow-100 dark:bg-yellow-900/30' },
-  { id: 'conviction', name: 'Conviction', color: 'from-green-400 to-emerald-600', lightColor: 'bg-green-100 dark:bg-green-900/30' },
-  { id: 'term_sheet', name: 'Term Sheet', color: 'from-purple-400 to-purple-600', lightColor: 'bg-purple-100 dark:bg-purple-900/30' },
-  { id: 'due_diligence', name: 'Due Diligence', color: 'from-indigo-400 to-indigo-600', lightColor: 'bg-indigo-100 dark:bg-indigo-900/30' },
-  { id: 'closed', name: 'Closed', color: 'from-pink-400 to-pink-600', lightColor: 'bg-pink-100 dark:bg-pink-900/30' },
+  { id: 'thesis_fit', name: 'Thesis Fit', gradient: 'linear-gradient(90deg, #94a3b8 0%, #475569 100%)', lightBg: 'rgba(241, 245, 249, 1)' },
+  { id: 'signals', name: 'Signals', gradient: 'linear-gradient(90deg, #60a5fa 0%, #2563eb 100%)', lightBg: 'rgba(219, 234, 254, 1)' },
+  { id: 'validation', name: 'Validation', gradient: 'linear-gradient(90deg, #facc15 0%, #d97706 100%)', lightBg: 'rgba(254, 243, 199, 1)' },
+  { id: 'conviction', name: 'Conviction', gradient: 'linear-gradient(90deg, #4ade80 0%, #10b981 100%)', lightBg: 'rgba(220, 252, 231, 1)' },
+  { id: 'term_sheet', name: 'Term Sheet', gradient: 'linear-gradient(90deg, #c084fc 0%, #9333ea 100%)', lightBg: 'rgba(243, 232, 255, 1)' },
+  { id: 'due_diligence', name: 'Due Diligence', gradient: 'linear-gradient(90deg, #818cf8 0%, #6366f1 100%)', lightBg: 'rgba(224, 231, 255, 1)' },
+  { id: 'closed', name: 'Closed', gradient: 'linear-gradient(90deg, #f472b6 0%, #ec4899 100%)', lightBg: 'rgba(252, 231, 243, 1)' },
 ] as const
 
 export default function PipelineChart({ deals }: PipelineChartProps) {
@@ -35,11 +35,21 @@ export default function PipelineChart({ deals }: PipelineChartProps) {
     : 0
 
   return (
-    <Card className="card-hover bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <Card 
+      className="overflow-hidden bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+      style={{
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+      }}
+    >
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl font-semibold flex items-center gap-2">
-            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
+            <div 
+              className="p-2 rounded-lg"
+              style={{
+                background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)'
+              }}
+            >
               <BarChart3 className="h-5 w-5 text-white" />
             </div>
             Deal Pipeline Overview
@@ -72,7 +82,10 @@ export default function PipelineChart({ deals }: PipelineChartProps) {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${stage.color}`} />
+                  <div 
+                    className="w-3 h-3 rounded-full"
+                    style={{ background: stage.gradient }}
+                  />
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {stage.name}
                   </span>
@@ -88,10 +101,16 @@ export default function PipelineChart({ deals }: PipelineChartProps) {
                   )}
                 </div>
               </div>
-              <div className={`relative h-10 ${stage.lightColor} rounded-xl overflow-hidden`}>
+              <div 
+                className="relative h-10 rounded-xl overflow-hidden"
+                style={{ backgroundColor: stage.lightBg }}
+              >
                 <div
-                  className={`absolute inset-y-0 left-0 bg-gradient-to-r ${stage.color} transition-all duration-700 ease-out flex items-center justify-end pr-3 shimmer`}
-                  style={{ width: `${Math.max(percentage, count > 0 ? 5 : 0)}%` }}
+                  className="absolute inset-y-0 left-0 transition-all duration-700 ease-out flex items-center justify-end pr-3"
+                  style={{ 
+                    width: `${Math.max(percentage, count > 0 ? 5 : 0)}%`,
+                    background: stage.gradient
+                  }}
                 >
                   {count > 0 && (
                     <span className="text-sm font-bold text-white drop-shadow-sm">
@@ -101,7 +120,13 @@ export default function PipelineChart({ deals }: PipelineChartProps) {
                 </div>
                 {/* Shimmer effect overlay */}
                 {count > 0 && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+                  <div 
+                    className="absolute inset-0 -translate-x-full"
+                    style={{
+                      background: 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)',
+                      animation: 'shimmer 2s infinite'
+                    }}
+                  />
                 )}
               </div>
             </div>
@@ -115,7 +140,15 @@ export default function PipelineChart({ deals }: PipelineChartProps) {
                 <Target className="h-3.5 w-3.5" />
                 Total Active
               </p>
-              <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <p 
+                className="text-3xl font-bold"
+                style={{
+                  background: 'linear-gradient(90deg, #9333ea 0%, #ec4899 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}
+              >
                 {totalActive}
               </p>
               <p className="text-xs text-gray-400">Across all stages</p>
@@ -125,7 +158,15 @@ export default function PipelineChart({ deals }: PipelineChartProps) {
                 <TrendingUp className="h-3.5 w-3.5" />
                 Conversion Rate
               </p>
-              <p className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+              <p 
+                className="text-3xl font-bold"
+                style={{
+                  background: 'linear-gradient(90deg, #16a34a 0%, #10b981 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}
+              >
                 {conversionRate}%
               </p>
               <p className="text-xs text-gray-400">To closed deals</p>

@@ -22,35 +22,35 @@ export default function RecentActivity({ deals }: RecentActivityProps) {
   const getActivityIcon = (stage: string) => {
     switch (stage) {
       case 'thesis_fit':
-        return { icon: FileText, color: 'from-slate-400 to-slate-600' }
+        return { icon: FileText, gradient: 'linear-gradient(135deg, #94a3b8 0%, #475569 100%)' }
       case 'signals':
-        return { icon: TrendingUp, color: 'from-blue-400 to-blue-600' }
+        return { icon: TrendingUp, gradient: 'linear-gradient(135deg, #60a5fa 0%, #2563eb 100%)' }
       case 'validation':
-        return { icon: Briefcase, color: 'from-yellow-400 to-amber-600' }
+        return { icon: Briefcase, gradient: 'linear-gradient(135deg, #facc15 0%, #d97706 100%)' }
       case 'conviction':
-        return { icon: Star, color: 'from-green-400 to-emerald-600' }
+        return { icon: Star, gradient: 'linear-gradient(135deg, #4ade80 0%, #10b981 100%)' }
       case 'term_sheet':
-        return { icon: FileText, color: 'from-purple-400 to-purple-600' }
+        return { icon: FileText, gradient: 'linear-gradient(135deg, #c084fc 0%, #9333ea 100%)' }
       case 'due_diligence':
-        return { icon: Calendar, color: 'from-indigo-400 to-indigo-600' }
+        return { icon: Calendar, gradient: 'linear-gradient(135deg, #818cf8 0%, #6366f1 100%)' }
       case 'closed':
-        return { icon: Star, color: 'from-pink-400 to-pink-600' }
+        return { icon: Star, gradient: 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)' }
       default:
-        return { icon: Calendar, color: 'from-gray-400 to-gray-600' }
+        return { icon: Calendar, gradient: 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)' }
     }
   }
 
-  const getStageColor = (stage: string) => {
-    const colors: Record<string, string> = {
-      'thesis_fit': 'bg-slate-100 text-slate-700 dark:bg-slate-900/50 dark:text-slate-300',
-      'signals': 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
-      'validation': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300',
-      'conviction': 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
-      'term_sheet': 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300',
-      'due_diligence': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300',
-      'closed': 'bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-300',
+  const getStageStyles = (stage: string) => {
+    const styles: Record<string, { bg: string, color: string }> = {
+      'thesis_fit': { bg: 'rgba(241, 245, 249, 1)', color: '#475569' },
+      'signals': { bg: 'rgba(219, 234, 254, 1)', color: '#2563eb' },
+      'validation': { bg: 'rgba(254, 243, 199, 1)', color: '#d97706' },
+      'conviction': { bg: 'rgba(220, 252, 231, 1)', color: '#16a34a' },
+      'term_sheet': { bg: 'rgba(243, 232, 255, 1)', color: '#9333ea' },
+      'due_diligence': { bg: 'rgba(224, 231, 255, 1)', color: '#6366f1' },
+      'closed': { bg: 'rgba(252, 231, 243, 1)', color: '#ec4899' },
     }
-    return colors[stage] || 'bg-gray-100 text-gray-700 dark:bg-gray-900/50 dark:text-gray-300'
+    return styles[stage] || { bg: 'rgba(243, 244, 246, 1)', color: '#6b7280' }
   }
 
   const formatDate = (date: string) => {
@@ -70,10 +70,20 @@ export default function RecentActivity({ deals }: RecentActivityProps) {
   }
 
   return (
-    <Card className="card-hover bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <Card 
+      className="overflow-hidden bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+      style={{
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+      }}
+    >
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <CardTitle className="text-xl font-semibold flex items-center gap-2">
-          <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg">
+          <div 
+            className="p-2 rounded-lg"
+            style={{
+              background: 'linear-gradient(135deg, #6366f1 0%, #9333ea 100%)'
+            }}
+          >
             <Clock className="h-5 w-5 text-white" />
           </div>
           Recent Activity
@@ -89,28 +99,48 @@ export default function RecentActivity({ deals }: RecentActivityProps) {
       <CardContent className="px-6 pb-6">
         <div className="space-y-1">
           {recentDeals.map((deal, index) => {
-            const { icon: Icon, color } = getActivityIcon(deal.stage)
+            const { icon: Icon, gradient } = getActivityIcon(deal.stage)
+            const stageStyles = getStageStyles(deal.stage)
             return (
               <Link
                 key={deal.id}
                 href={`/dashboard/deals/${deal.id}`}
-                className="group relative flex items-start gap-4 p-4 -mx-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200"
+                className="group relative flex items-start gap-4 p-4 -mx-2 rounded-xl transition-all duration-200"
                 style={{ 
                   animationDelay: `${index * 100}ms`,
-                  animation: 'slide-up 0.5s ease-out forwards'
+                  animation: 'slide-up 0.5s ease-out forwards',
+                  opacity: 0
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(249, 250, 251, 1)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
                 }}
               >
                 {/* Timeline line */}
                 {index < recentDeals.length - 1 && (
-                  <div className="absolute left-6 top-14 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700" />
+                  <div 
+                    className="absolute left-6 top-14 bottom-0 w-0.5"
+                    style={{ backgroundColor: 'rgba(229, 231, 235, 1)' }}
+                  />
                 )}
                 
                 {/* Icon */}
                 <div className="relative flex-shrink-0">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                  <div 
+                    className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300"
+                    style={{ background: gradient }}
+                  >
                     <Icon className="h-6 w-6 text-white" />
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-white dark:bg-gray-800 rounded-full border-2 border-gray-200 dark:border-gray-700" />
+                  <div 
+                    className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2"
+                    style={{ 
+                      backgroundColor: 'white',
+                      borderColor: 'rgba(229, 231, 235, 1)'
+                    }}
+                  />
                 </div>
                 
                 {/* Content */}
@@ -122,7 +152,13 @@ export default function RecentActivity({ deals }: RecentActivityProps) {
                         {deal.company.name}
                       </p>
                     </div>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStageColor(deal.stage)}`}>
+                    <span 
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                      style={{
+                        backgroundColor: stageStyles.bg,
+                        color: stageStyles.color
+                      }}
+                    >
                       {deal.stage.replace('_', ' ').charAt(0).toUpperCase() + deal.stage.replace('_', ' ').slice(1)}
                     </span>
                   </div>
@@ -144,10 +180,16 @@ export default function RecentActivity({ deals }: RecentActivityProps) {
                     <div className="flex items-center gap-4 mt-2">
                       {deal.thesis_fit_score && (
                         <div className="flex items-center gap-1.5">
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 w-20">
+                          <div 
+                            className="rounded-full h-1.5 w-20"
+                            style={{ backgroundColor: 'rgba(229, 231, 235, 1)' }}
+                          >
                             <div 
-                              className="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full transition-all duration-500"
-                              style={{ width: `${(deal.thesis_fit_score / 10) * 100}%` }}
+                              className="h-1.5 rounded-full transition-all duration-500"
+                              style={{ 
+                                width: `${(deal.thesis_fit_score / 10) * 100}%`,
+                                background: 'linear-gradient(90deg, #a855f7 0%, #ec4899 100%)'
+                              }}
                             />
                           </div>
                           <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
@@ -157,10 +199,16 @@ export default function RecentActivity({ deals }: RecentActivityProps) {
                       )}
                       {deal.team_score && (
                         <div className="flex items-center gap-1.5">
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 w-20">
+                          <div 
+                            className="rounded-full h-1.5 w-20"
+                            style={{ backgroundColor: 'rgba(229, 231, 235, 1)' }}
+                          >
                             <div 
-                              className="bg-gradient-to-r from-blue-500 to-indigo-500 h-1.5 rounded-full transition-all duration-500"
-                              style={{ width: `${(deal.team_score / 10) * 100}%` }}
+                              className="h-1.5 rounded-full transition-all duration-500"
+                              style={{ 
+                                width: `${(deal.team_score / 10) * 100}%`,
+                                background: 'linear-gradient(90deg, #3b82f6 0%, #6366f1 100%)'
+                              }}
                             />
                           </div>
                           <span className="text-xs font-medium text-gray-600 dark:text-gray-400">

@@ -8,41 +8,33 @@ const config: Config = {
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   safelist: [
-    // Gradient classes
-    'gradient-purple',
-    'gradient-blue',
-    'gradient-success',
-    'gradient-warning',
     // Animation classes
-    'animate-in',
-    'animate-pulse',
-    'animate-shimmer',
+    'animate-fade-in',
+    'animate-slide-in',
     // Card classes
+    'card-minimal',
     'card-hover',
-    'metric-card',
-    'glass-effect',
     // Navigation classes
-    'dashboard-header',
     'nav-item',
     'nav-item-active',
-    // Stat classes
-    'stat-trend',
-    'stat-trend-up',
-    'stat-trend-down',
-    // Utility classes
-    'shimmer',
-    'glow',
-    // Background gradients
-    'bg-gradient-to-r',
-    'bg-gradient-to-br',
-    'from-purple-600',
-    'to-pink-600',
-    'from-blue-600',
-    'to-indigo-600',
-    'from-green-500',
-    'to-emerald-600',
-    'from-yellow-500',
-    'to-orange-600',
+    // Typography
+    'heading-1',
+    'heading-2',
+    'heading-3',
+    'heading-4',
+    'body-large',
+    'body',
+    'body-small',
+    // Metrics
+    'metric-value',
+    'metric-label',
+    // Status
+    'status-success',
+    'status-warning',
+    'status-error',
+    // Buttons
+    'btn-primary',
+    'btn-secondary',
   ],
   theme: {
     container: {
@@ -102,29 +94,20 @@ const config: Config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "slide-up": {
-          from: { opacity: "0", transform: "translateY(20px)" },
+        "fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+        "slide-in": {
+          from: { opacity: "0", transform: "translateY(4px)" },
           to: { opacity: "1", transform: "translateY(0)" },
-        },
-        "shimmer": {
-          "100%": { transform: "translateX(100%)" },
-        },
-        "pulse-soft": {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.5" },
-        },
-        "glow-pulse": {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.5" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "slide-up": "slide-up 0.6s ease-out",
-        "shimmer": "shimmer 1.5s ease-in-out infinite",
-        "pulse-soft": "pulse-soft 2s ease-in-out infinite",
-        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
+        "fade-in": "fade-in 0.3s ease-out",
+        "slide-in": "slide-in 0.3s ease-out",
       },
     },
   },

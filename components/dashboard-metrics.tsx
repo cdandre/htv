@@ -1,6 +1,5 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { TrendingUp, TrendingDown, DollarSign, FileText, Clock, CheckCircle, Briefcase, Users, Target, Zap } from 'lucide-react'
 import { Database } from '@/types/database'
 
@@ -31,8 +30,6 @@ export default function DashboardMetrics({ deals }: DashboardMetricsProps) {
       icon: Briefcase,
       description: 'In pipeline',
       trend: { value: 12, isPositive: true },
-      gradient: 'gradient-purple',
-      iconBg: 'from-purple-500 to-pink-500',
     },
     {
       title: 'Portfolio Value',
@@ -40,8 +37,6 @@ export default function DashboardMetrics({ deals }: DashboardMetricsProps) {
       icon: DollarSign,
       description: 'Total invested',
       trend: { value: 8, isPositive: true },
-      gradient: 'gradient-success',
-      iconBg: 'from-green-500 to-emerald-500',
     },
     {
       title: 'Avg Deal Size',
@@ -49,8 +44,6 @@ export default function DashboardMetrics({ deals }: DashboardMetricsProps) {
       icon: Target,
       description: 'Average check size',
       trend: { value: 5, isPositive: false },
-      gradient: 'gradient-blue',
-      iconBg: 'from-blue-500 to-indigo-500',
     },
     {
       title: 'Closed Deals',
@@ -58,8 +51,6 @@ export default function DashboardMetrics({ deals }: DashboardMetricsProps) {
       icon: CheckCircle,
       description: 'This quarter',
       trend: { value: 25, isPositive: true },
-      gradient: 'gradient-warning',
-      iconBg: 'from-yellow-500 to-orange-500',
     },
   ]
 
@@ -67,77 +58,42 @@ export default function DashboardMetrics({ deals }: DashboardMetricsProps) {
     <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
       {metrics.map((metric, index) => {
         const Icon = metric.icon
-        const gradientMap = {
-          'gradient-purple': 'linear-gradient(90deg, #9333ea 0%, #ec4899 100%)',
-          'gradient-success': 'linear-gradient(90deg, #22c55e 0%, #10b981 100%)',
-          'gradient-blue': 'linear-gradient(90deg, #3b82f6 0%, #6366f1 100%)',
-          'gradient-warning': 'linear-gradient(90deg, #f59e0b 0%, #f97316 100%)'
-        }
         return (
           <div 
             key={index} 
-            className="group relative overflow-hidden rounded-2xl p-6 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
-            style={{ 
-              animationDelay: `${index * 100}ms`,
-              animation: 'slide-up 0.6s ease-out forwards',
-              opacity: 0,
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
-            }}
+            className="card-minimal p-6 hover:shadow-md transition-all duration-200"
           >
             <div className="flex items-start justify-between mb-4">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <p className="metric-label mb-2">
                   {metric.title}
                 </p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                <p className="metric-value text-black dark:text-white">
                   {metric.value}
                 </p>
               </div>
-              <div 
-                className="h-12 w-12 rounded-xl p-2.5 shadow-lg group-hover:scale-110 transition-transform duration-300"
-                style={{
-                  background: metric.iconBg.replace('from-', '').replace('to-', '').includes('purple') 
-                    ? 'linear-gradient(135deg, #9333ea 0%, #ec4899 100%)'
-                    : metric.iconBg.includes('green') 
-                    ? 'linear-gradient(135deg, #22c55e 0%, #10b981 100%)'
-                    : metric.iconBg.includes('blue')
-                    ? 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)'
-                    : 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)'
-                }}
-              >
-                <Icon className="h-6 w-6 text-white" />
+              <div className="p-2">
+                <Icon className="h-6 w-6 text-gray-400 dark:text-gray-600" />
               </div>
             </div>
             
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex items-center justify-between mt-4">
+              <span className="body-small text-gray-600 dark:text-gray-400">
                 {metric.description}
               </span>
               {metric.trend && (
-                <div 
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium"
-                  style={{
-                    backgroundColor: metric.trend.isPositive ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                    color: metric.trend.isPositive ? '#16a34a' : '#dc2626'
-                  }}
-                >
+                <div className={`inline-flex items-center gap-1 text-sm font-medium ${
+                  metric.trend.isPositive ? 'status-success' : 'status-error'
+                }`}>
                   {metric.trend.isPositive ? (
                     <TrendingUp className="h-3 w-3" />
                   ) : (
                     <TrendingDown className="h-3 w-3" />
                   )}
-                  <span className="font-semibold">{metric.trend.value}%</span>
+                  <span>{metric.trend.value}%</span>
                 </div>
               )}
             </div>
-            
-            {/* Decorative gradient line */}
-            <div 
-              className="absolute bottom-0 left-0 right-0 h-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-              style={{
-                background: gradientMap[metric.gradient as keyof typeof gradientMap] || gradientMap['gradient-purple']
-              }}
-            />
           </div>
         )
       })}

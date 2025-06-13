@@ -1,27 +1,19 @@
-/* Dashboard-specific critical styles for production */
+/* Dashboard-specific minimal styles for production */
 
-/* Ensure all gradients work in production */
-.gradient-purple {
-  background: linear-gradient(90deg, #9333ea 0%, #ec4899 100%) !important;
-}
-
-.gradient-blue {
-  background: linear-gradient(90deg, #3b82f6 0%, #6366f1 100%) !important;
-}
-
-.gradient-success {
-  background: linear-gradient(90deg, #22c55e 0%, #10b981 100%) !important;
-}
-
-.gradient-warning {
-  background: linear-gradient(90deg, #f59e0b 0%, #f97316 100%) !important;
-}
-
-/* Animation keyframes that must work in production */
-@keyframes slide-up {
+/* Animation keyframes */
+@keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -29,116 +21,145 @@
   }
 }
 
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
-  }
+/* Card styles */
+.card-minimal {
+  background-color: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 0.125rem;
 }
 
-@keyframes pulse-soft {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+.dark .card-minimal {
+  background-color: black;
+  border-color: #333333;
 }
 
-/* Glass effect for production */
-.glass-effect {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  background-color: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.dark .glass-effect {
-  background-color: rgba(17, 24, 39, 0.8);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Metric card shadows */
-.metric-card {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-.metric-card:hover {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-/* Card hover effects */
 .card-hover {
-  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 200ms ease;
 }
 
 .card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-/* Ensure text gradients work */
-.text-gradient {
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* Typography */
+.heading-1 {
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-family: 'Montserrat', sans-serif;
 }
 
-/* Loading states */
-.animate-in {
-  animation: slide-up 0.6s ease-out forwards;
+.heading-2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-family: 'Montserrat', sans-serif;
 }
 
-/* Dashboard header */
-.dashboard-header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+.heading-3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.4;
+  font-family: 'Montserrat', sans-serif;
 }
 
-/* Navigation items */
+.heading-4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-family: 'Montserrat', sans-serif;
+}
+
+/* Metric styles */
+.metric-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #666666;
+}
+
+.dark .metric-label {
+  color: #999999;
+}
+
+/* Navigation */
 .nav-item {
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: color 200ms ease;
 }
 
 .nav-item-active {
-  background-color: rgba(237, 233, 254, 1);
-  color: #6d28d9;
+  font-weight: 600;
 }
 
-.dark .nav-item-active {
-  background-color: rgba(109, 40, 217, 0.2);
-  color: #c4b5fd;
-}
-
-/* Stat trends */
-.stat-trend {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  border-radius: 9999px;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.stat-trend-up {
-  background-color: rgba(220, 252, 231, 1);
+/* Status colors - used sparingly */
+.status-success {
   color: #16a34a;
 }
 
-.dark .stat-trend-up {
-  background-color: rgba(34, 197, 94, 0.2);
-  color: #86efac;
+.dark .status-success {
+  color: #22c55e;
 }
 
-.stat-trend-down {
-  background-color: rgba(254, 226, 226, 1);
+.status-error {
   color: #dc2626;
 }
 
-.dark .stat-trend-down {
-  background-color: rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
+.dark .status-error {
+  color: #ef4444;
+}
+
+/* Button styles */
+.btn-primary {
+  background-color: black;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #333333;
+}
+
+.dark .btn-primary {
+  background-color: white;
+  color: black;
+}
+
+.dark .btn-primary:hover {
+  background-color: #e5e5e5;
+}
+
+.btn-secondary {
+  background-color: white;
+  color: black;
+  border: 1px solid black;
+}
+
+.btn-secondary:hover {
+  background-color: #f5f5f5;
+}
+
+.dark .btn-secondary {
+  background-color: black;
+  color: white;
+  border: 1px solid white;
+}
+
+.dark .btn-secondary:hover {
+  background-color: #1a1a1a;
+}
+
+/* Animation utility classes */
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
 }

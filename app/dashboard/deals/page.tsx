@@ -18,30 +18,32 @@ export default async function DealsPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Deal Pipeline</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage and track all deals through your investment process
-          </p>
-        </div>
-        <div className="flex items-center gap-2 mt-4 sm:mt-0">
-          <Button variant="outline" size="sm">
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-          <Button asChild size="sm">
+      <div className="border-b border-gray-200 dark:border-gray-800 pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="heading-1 text-black dark:text-white">Deal Pipeline</h1>
+            <p className="body-large text-gray-600 dark:text-gray-400 mt-2">
+              Manage and track all deals through your investment process
+            </p>
+          </div>
+          <div className="flex items-center gap-3 mt-6 sm:mt-0">
+            <Button variant="outline" size="default" className="border-gray-300 dark:border-gray-700">
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+            </Button>
+            <Button variant="outline" size="default" className="border-gray-300 dark:border-gray-700">
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
             <Link href="/dashboard/deals/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New Deal
+              <Button size="default" className="btn-primary">
+                <Plus className="mr-2 h-4 w-4" />
+                New Deal
+              </Button>
             </Link>
-          </Button>
+          </div>
         </div>
       </div>
       

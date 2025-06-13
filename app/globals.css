@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Open+Sans:wght@300;400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,70 +7,59 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 0 0% 0%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 0 0% 0%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 267 84% 58%;
+    --popover-foreground: 0 0% 0%;
+    --primary: 0 0% 0%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 267 84% 94%;
-    --accent-foreground: 267 84% 35%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 0%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 0%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 267 84% 58%;
-    --radius: 0.75rem;
-    --chart-1: 267 84% 58%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 0%;
+    --radius: 0.25rem;
     
-    /* Premium colors */
-    --purple-gradient-start: 267 84% 58%;
-    --purple-gradient-end: 254 87% 67%;
-    --blue-gradient-start: 221 83% 53%;
-    --blue-gradient-end: 210 79% 46%;
+    /* Chart colors - minimal palette */
+    --chart-1: 0 0% 0%;
+    --chart-2: 0 0% 20%;
+    --chart-3: 0 0% 40%;
+    --chart-4: 0 0% 60%;
+    --chart-5: 0 0% 80%;
+    
+    /* Status colors - used sparingly */
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
-    --info: 199 89% 48%;
+    --info: 0 0% 40%;
   }
 
   .dark {
-    --background: 220 26% 7%;
-    --foreground: 210 40% 98%;
-    --card: 224 28% 10%;
-    --card-foreground: 210 40% 98%;
-    --popover: 224 28% 10%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 267 84% 58%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 267 30% 25%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 267 20% 18%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 267 84% 20%;
-    --accent-foreground: 210 40% 98%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 267 20% 18%;
-    --input: 267 20% 18%;
-    --ring: 267 84% 58%;
-    
-    /* Premium colors dark */
-    --purple-gradient-start: 267 84% 58%;
-    --purple-gradient-end: 254 87% 67%;
-    --blue-gradient-start: 221 83% 53%;
-    --blue-gradient-end: 210 79% 46%;
-    --success: 142 76% 36%;
-    --warning: 38 92% 50%;
-    --info: 199 89% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 0 0% 100%;
   }
 }
 
@@ -78,83 +69,122 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Open Sans', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
 }
 
 @layer components {
-  .animate-in {
-    animation: animateIn 0.3s ease-out;
+  /* Typography */
+  .heading-1 {
+    @apply text-5xl font-bold leading-tight tracking-tight;
+  }
+  
+  .heading-2 {
+    @apply text-4xl font-bold leading-tight tracking-tight;
+  }
+  
+  .heading-3 {
+    @apply text-2xl font-semibold leading-snug;
+  }
+  
+  .heading-4 {
+    @apply text-xl font-semibold;
+  }
+  
+  .body-large {
+    @apply text-lg leading-relaxed;
+  }
+  
+  .body {
+    @apply text-base leading-relaxed;
+  }
+  
+  .body-small {
+    @apply text-sm leading-relaxed;
+  }
+  
+  /* Cards - minimal with subtle shadows */
+  .card-minimal {
+    @apply bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-sm;
   }
   
   .card-hover {
-    @apply transition-all duration-300 hover:shadow-2xl hover:-translate-y-1;
+    @apply transition-all duration-200 hover:shadow-md;
   }
   
-  .glass-effect {
-    @apply backdrop-blur-md bg-white/80 dark:bg-gray-900/80 border border-white/20;
-  }
-  
-  .gradient-purple {
-    @apply bg-gradient-to-r from-purple-600 to-pink-600;
-  }
-  
-  .gradient-blue {
-    @apply bg-gradient-to-r from-blue-600 to-indigo-600;
-  }
-  
-  .gradient-success {
-    @apply bg-gradient-to-r from-green-500 to-emerald-600;
-  }
-  
-  .gradient-warning {
-    @apply bg-gradient-to-r from-yellow-500 to-orange-600;
-  }
-  
-  .metric-card {
-    @apply relative overflow-hidden rounded-2xl p-6 shadow-xl transition-all duration-300 hover:shadow-2xl hover:-translate-y-1;
-  }
-  
-  .metric-icon {
-    @apply h-12 w-12 rounded-xl p-2.5 shadow-lg;
-  }
-  
-  .dashboard-header {
-    @apply sticky top-0 z-50 border-b bg-white/80 backdrop-blur-xl dark:bg-gray-900/80;
-  }
-  
+  /* Navigation */
   .nav-item {
-    @apply relative rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-800;
+    @apply px-3 py-2 text-sm font-medium transition-colors duration-200 hover:text-black dark:hover:text-white;
   }
   
   .nav-item-active {
-    @apply bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400;
+    @apply text-black dark:text-white font-semibold;
   }
   
-  .stat-trend {
-    @apply inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium;
+  /* Buttons - minimal design */
+  .btn-primary {
+    @apply bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200;
   }
   
-  .stat-trend-up {
-    @apply bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400;
+  .btn-secondary {
+    @apply bg-white text-black border border-black hover:bg-gray-50 dark:bg-black dark:text-white dark:border-white dark:hover:bg-gray-900;
   }
   
-  .stat-trend-down {
-    @apply bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400;
+  /* Metrics */
+  .metric-value {
+    @apply text-4xl font-bold tracking-tight;
   }
   
-  .shimmer {
-    @apply relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_1.5s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent;
+  .metric-label {
+    @apply text-sm text-gray-600 dark:text-gray-400 uppercase tracking-wide;
   }
   
-  .glow {
-    @apply relative before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-r before:from-purple-600/20 before:to-pink-600/20 before:blur-xl;
+  /* Status indicators - minimal */
+  .status-success {
+    @apply text-green-600 dark:text-green-400;
+  }
+  
+  .status-warning {
+    @apply text-yellow-600 dark:text-yellow-400;
+  }
+  
+  .status-error {
+    @apply text-red-600 dark:text-red-400;
+  }
+  
+  /* Data tables */
+  .data-table {
+    @apply w-full text-sm;
+  }
+  
+  .data-table th {
+    @apply text-left font-semibold text-xs uppercase tracking-wider text-gray-600 dark:text-gray-400 py-3 px-4;
+  }
+  
+  .data-table td {
+    @apply py-3 px-4 border-t border-gray-100 dark:border-gray-800;
   }
 }
 
-@keyframes animateIn {
+/* Minimal animations */
+@keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -162,37 +192,11 @@
   }
 }
 
-@keyframes pulse-soft {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: .5;
-  }
+/* Utility classes */
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
 }
 
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-@keyframes glow-pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
 }

@@ -347,7 +347,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               <div>
                 <h3 className="text-lg font-medium mb-4">Theme</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <Card 
                     className={`cursor-pointer transition-all ${theme === 'light' ? 'border-primary ring-2 ring-primary/20' : 'hover:border-primary'}`}
                     onClick={() => setTheme('light')}
@@ -368,17 +368,6 @@ export default function SettingsPage() {
                         <Moon className="h-8 w-8 text-gray-600" />
                       </div>
                       <p className="text-sm font-medium text-center">Dark</p>
-                    </CardContent>
-                  </Card>
-                  <Card 
-                    className={`cursor-pointer transition-all ${theme === 'system' ? 'border-primary ring-2 ring-primary/20' : 'hover:border-primary'}`}
-                    onClick={() => setTheme('system')}
-                  >
-                    <CardContent className="p-4">
-                      <div className="w-full h-20 bg-gradient-to-br from-gray-100 to-gray-900 rounded-md border mb-2 flex items-center justify-center">
-                        <Monitor className="h-8 w-8 text-gray-500" />
-                      </div>
-                      <p className="text-sm font-medium text-center">System</p>
                     </CardContent>
                   </Card>
                 </div>

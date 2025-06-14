@@ -26,20 +26,29 @@ export async function DELETE(
     }
 
     // Check if user belongs to the organization and has appropriate role
-    const { data: userRole, error: roleError } = await supabase
-      .from('organization_users')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('organization_id', deal.organization_id)
+    const { data: userProfile, error: roleError } = await supabase
+      .from('user_profiles')
+      .select('role, organization_id')
+      .eq('id', user.id)
       .single();
 
-    if (roleError || !userRole) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    if (roleError || !userProfile) {
+      console.error('Error fetching user profile:', roleError);
+      return NextResponse.json({ error: 'User profile not found' }, { status: 403 });
+    }
+
+    // Verify user belongs to the same organization as the deal
+    if (userProfile.organization_id !== deal.organization_id) {
+      return NextResponse.json({ error: 'Unauthorized - different organization' }, { status: 403 });
     }
 
     // Only admins and partners can delete deals
-    if (!['admin', 'partner'].includes(userRole.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    if (!['admin', 'partner'].includes(userProfile.role)) {
+      console.log(`User ${user.id} with role ${userProfile.role} attempted to delete deal ${params.id}`);
+      return NextResponse.json({ 
+        error: 'Insufficient permissions - only admins and partners can delete deals',
+        userRole: userProfile.role 
+      }, { status: 403 });
     }
 
     // Delete the deal (this will cascade delete related records due to foreign key constraints)

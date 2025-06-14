@@ -207,16 +207,23 @@ Provide a comprehensive investment analysis as a JSON object with the following 
   ]
 }`
 
-    // Use direct API call for Responses API
+    // Use the Responses API as required
     try {
       console.log('Creating analysis with OpenAI Responses API...')
       
+      // Build the complete prompt
+      let fullPrompt = inputContent[0].text
+      
+      // The Responses API expects a simple string input for basic use
       const requestBody = {
         model: 'gpt-4.1',
-        input: [{
-          role: 'user',
-          content: inputContent
-        }]
+        input: fullPrompt,
+        text: {
+          format: {
+            type: 'json_object'
+          }
+        },
+        temperature: 0.7
       }
       
       const apiResponse = await fetch('https://api.openai.com/v1/responses', {
@@ -240,11 +247,23 @@ Provide a comprehensive investment analysis as a JSON object with the following 
       // Extract the structured analysis from the Responses API output
       let analysisData
       try {
-        // The SDK response has output_text property
-        const outputText = response.output_text || ''
+        let outputText = ''
+        
+        // Based on the API documentation, the response format is:
+        // response.output[0].content[0].text
+        if (response.output && Array.isArray(response.output) && response.output.length > 0) {
+          const firstOutput = response.output[0]
+          if (firstOutput.content && Array.isArray(firstOutput.content) && firstOutput.content.length > 0) {
+            const firstContent = firstOutput.content[0]
+            if (firstContent.type === 'output_text' && firstContent.text) {
+              outputText = firstContent.text
+            }
+          }
+        }
         
         if (!outputText) {
           console.error('No output text found in response')
+          console.error('Response structure:', JSON.stringify(response, null, 2))
           throw new Error('No analysis content in response')
         }
         

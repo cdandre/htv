@@ -45,6 +45,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import DealDocumentUpload from '@/components/deal-document-upload'
 import { cn } from '@/lib/utils'
 
@@ -92,11 +93,28 @@ export default function DealDetail({ deal }: DealDetailProps) {
         body: JSON.stringify({ dealId: deal.id }),
       })
       
+      const data = await response.json()
+      
       if (response.ok) {
+        toast({
+          title: 'Success',
+          description: 'Investment memo generated successfully',
+        })
         window.location.reload()
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to generate memo',
+          variant: 'destructive',
+        })
       }
     } catch (error) {
       console.error('Error generating memo:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to generate memo',
+        variant: 'destructive',
+      })
     } finally {
       setGeneratingMemo(false)
     }
@@ -876,27 +894,29 @@ export default function DealDetail({ deal }: DealDetailProps) {
               {deal.investment_memos.length > 0 ? (
                 <div className="space-y-3">
                   {deal.investment_memos.map((memo) => (
-                    <div key={memo.id} className="group relative p-4 rounded-lg border hover:border-primary/20 transition-all card-hover">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-semibold group-hover:text-primary transition-colors">
-                            {memo.title}
-                          </h4>
-                          <div className="flex items-center gap-3 mt-2">
-                            <Badge variant="outline">
-                              v{memo.version}
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {format(new Date(memo.created_at), 'MMM d, yyyy')}
-                            </span>
-                            <Badge variant={memo.status === 'completed' ? 'success' : 'secondary'}>
-                              {memo.status}
-                            </Badge>
+                    <Link key={memo.id} href={`/dashboard/memos/${memo.id}`}>
+                      <div className="group relative p-4 rounded-lg border hover:border-primary/20 transition-all card-hover cursor-pointer">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-semibold group-hover:text-primary transition-colors">
+                              {memo.title}
+                            </h4>
+                            <div className="flex items-center gap-3 mt-2">
+                              <Badge variant="outline">
+                                v{memo.version}
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">
+                                {format(new Date(memo.created_at), 'MMM d, yyyy')}
+                              </span>
+                              <Badge variant={memo.status === 'completed' ? 'success' : 'secondary'}>
+                                {memo.status}
+                              </Badge>
+                            </div>
                           </div>
+                          <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (

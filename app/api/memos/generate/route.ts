@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Call the Supabase edge function
+    console.log('Calling generate-memo edge function for deal:', dealId)
     const { data, error } = await supabase.functions.invoke('generate-memo', {
       body: { dealId },
       headers: {
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('Edge function response:', data)
     return NextResponse.json(data)
   } catch (error: any) {
     console.error('Error generating memo:', error)

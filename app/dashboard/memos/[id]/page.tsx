@@ -23,7 +23,7 @@ interface InvestmentMemo {
   id: string
   deal_id: string
   content: any
-  status: 'draft' | 'final'
+  status: 'pending' | 'processing' | 'completed' | 'failed'
   version: number
   created_at: string
   updated_at: string
@@ -57,9 +57,13 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
           *,
           deal:deals(
             id,
-            company_name,
+            title,
             stage,
-            sector
+            sector,
+            company:companies(
+              id,
+              name
+            )
           )
         `)
         .eq('id', params.id)
@@ -147,7 +151,7 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
       }
       
       // Save the PDF
-      pdf.save(`investment-memo-${memo.deal?.company_name || params.id}.pdf`)
+      pdf.save(`investment-memo-${memo.deal?.company?.name || params.id}.pdf`)
       
       toast({
         title: 'PDF exported',
@@ -172,7 +176,7 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
       setExportingWord(true)
       
       const blob = await exportMemoToWord(memo)
-      downloadBlob(blob, `investment-memo-${memo.deal?.company_name || params.id}.docx`)
+      downloadBlob(blob, `investment-memo-${memo.deal?.company?.name || params.id}.docx`)
       
       toast({
         title: 'Word document exported',
@@ -282,19 +286,19 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
                 <div>
                   <CardTitle className="text-2xl">Investment Memo</CardTitle>
                   <p className="text-muted-foreground">
-                    {memo.deal?.company_name || 'Unknown Company'}
+                    {memo.deal?.company?.name || 'Unknown Company'}
                   </p>
                 </div>
               </div>
-              <Badge variant={memo.status === 'final' ? 'default' : 'secondary'}>
-                {memo.status === 'final' ? 'Final' : 'Draft'} v{memo.version}
+              <Badge variant={memo.status === 'completed' ? 'default' : 'secondary'}>
+                {memo.status === 'completed' ? 'Completed' : memo.status.charAt(0).toUpperCase() + memo.status.slice(1)} v{memo.version}
               </Badge>
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Company</p>
-                <p className="font-medium">{memo.deal?.company_name || 'N/A'}</p>
+                <p className="font-medium">{memo.deal?.company?.name || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Stage</p>

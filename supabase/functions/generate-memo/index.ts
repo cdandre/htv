@@ -54,98 +54,229 @@ serve(async (req) => {
     }
 
     // Generate memo using OpenAI Responses API
-    const memoPrompt = `You are a senior venture capital partner writing an investment memo for the partnership.
+    const memoPrompt = `You are a senior venture capital partner at HTV writing a comprehensive investment memo for the investment committee. Your memo should be thorough, data-driven, and balanced.
 
 Company: ${deal.company.name}
 Deal: ${deal.title}
 Stage: ${deal.stage}
-Check Size: $${deal.check_size_min}-${deal.check_size_max}
+Check Size Range: $${deal.check_size_min ? (deal.check_size_min/1000000).toFixed(1) : '?'}M - $${deal.check_size_max ? (deal.check_size_max/1000000).toFixed(1) : '?'}M
 Website: ${deal.company.website || 'Not provided'}
-Sector: ${deal.sector || 'Unknown'}
+Location: ${deal.company.location || 'Not provided'}
 
-Based on the following analysis, write a professional investment memo. Use web search to find the most recent information about market conditions, competitor updates, and regulatory changes since the analysis was completed.
+Based on the following AI analysis, write a comprehensive investment memo. Use web search to find the most recent information about market conditions, competitor updates, regulatory changes, and comparable transactions.
 
+ANALYSIS DATA:
 ${JSON.stringify(latestAnalysis.result, null, 2)}
 
-IMPORTANT: Use web search to:
-1. Find the latest news about the company or sector (last 30 days)
-2. Check for any recent competitor funding rounds or exits
-3. Verify current market conditions and any macro changes
-4. Look for recent regulatory updates affecting the sector
-5. Find comparable company valuations and exit multiples
+IMPORTANT: Use web search extensively to:
+1. Find the latest news about the company (last 30-60 days)
+2. Research recent competitor funding rounds, acquisitions, or product launches
+3. Analyze current market conditions and macro trends affecting the sector
+4. Identify recent regulatory changes or upcoming regulations
+5. Find comparable company valuations, exits, and multiples
+6. Research the backgrounds of key team members
+7. Validate market size claims with recent analyst reports
 
-The memo should follow this exact structure:
+Write a comprehensive memo (~3,000 words) following this EXACT structure with the sections clearly defined:
 
 # Investment Memo: ${deal.company.name}
 
 ## Executive Summary
-[2-3 paragraphs summarizing the opportunity, our thesis, and recommendation]
+Write 2-3 paragraphs that include:
+- Company overview and what they do
+- Investment opportunity and proposed terms
+- Key investment highlights (3-4 bullet points)
+- Investment recommendation with rationale
+- Expected returns and exit timeline
 
 ## Company Overview
-### Business Description
-[What the company does, target market, value proposition]
+Provide a detailed description including:
+- Company mission and vision
+- Founding story and key milestones
+- Core products/services offered
+- Target customers and use cases
+- Current stage and achievements to date
 
+## Team Assessment
 ### Founding Team
-[Backgrounds, relevant experience, strengths/weaknesses]
+- Detailed backgrounds of founders (education, previous companies, achievements)
+- Relevant domain expertise and track record
+- Complementary skills and gaps in the team
+- References and reputation in the industry
 
-### Product & Technology
-[Core product, technical differentiation, development stage]
+### Key Employees and Advisors
+- Notable hires and their backgrounds
+- Advisory board composition and value-add
+- Team culture and hiring plans
+
+## Problem & Solution
+### Problem Statement
+- Detailed description of the problem being solved
+- Why this problem matters and who it affects
+- Current solutions and their shortcomings
+- Market pain points and customer frustrations
+
+### Solution
+- How the product/service solves the problem
+- Unique approach and key innovations
+- Technical moat and defensibility
+- Product roadmap and future vision
 
 ## Market Opportunity
-### Market Size & Growth
-[TAM/SAM/SOM analysis with specific numbers and sources]
+### Market Size & Segmentation
+- TAM (Total Addressable Market) with calculations
+- SAM (Serviceable Addressable Market) with rationale
+- SOM (Serviceable Obtainable Market) realistic targets
+- Market segmentation and initial target segments
 
-### Market Dynamics
-[Key trends, timing, why now]
+### Market Dynamics & Trends
+- Industry growth rates and drivers
+- Key market trends supporting the opportunity
+- Regulatory environment and changes
+- Technology shifts enabling the business
 
-### Competition
-[Competitive landscape, positioning, defensibility]
+## Product & Technology
+### Current Product
+- Detailed product description and features
+- Technology stack and architecture
+- Intellectual property and patents
+- Product-market fit evidence
 
-## Business Model & Traction
+### Product Development
+- Development roadmap for next 12-24 months
+- R&D investments and priorities
+- Technical challenges and solutions
+- Platform expansion opportunities
+
+## Business Model
 ### Revenue Model
-[How they make money, pricing, unit economics]
+- How the company makes money
+- Pricing strategy and rationale
+- Average contract values and deal sizes
+- Recurring vs. one-time revenue mix
 
-### Current Traction
-[Key metrics, customer validation, growth rate]
+### Unit Economics
+- Customer acquisition cost (CAC)
+- Lifetime value (LTV) and LTV/CAC ratio
+- Gross margins and contribution margins
+- Path to profitability
 
 ### Go-to-Market Strategy
-[Customer acquisition, sales process, channels]
+- Sales and marketing approach
+- Customer acquisition channels
+- Sales cycle and conversion rates
+- Partnership and channel strategies
 
-## Investment Thesis
-### Why We're Excited
-[3-4 bullet points on key strengths]
+## Traction & Metrics
+### Current Performance
+- Revenue and growth rates (MoM, YoY)
+- Customer count and notable logos
+- Key operational metrics
+- Cohort retention and engagement data
 
-### Key Risks & Mitigation
-[3-4 major risks and how they're addressed]
+### Validation & Proof Points
+- Customer testimonials and case studies
+- Pilot results and ROI demonstrated
+- Awards and recognition
+- Third-party validation
 
-### Value Add
-[How HTV can specifically help this company]
+## Competitive Analysis
+### Competitive Landscape
+- Direct competitors with detailed comparison
+- Indirect competitors and substitutes
+- Competitive positioning matrix
+- Market share analysis
+
+### Competitive Advantages
+- Sustainable competitive moats
+- Differentiation factors
+- Switching costs and lock-in effects
+- Network effects and scale advantages
 
 ## Financial Analysis
-### Current Financials
-[Burn rate, runway, revenue if any]
+### Historical Financials
+- Revenue history and growth
+- Burn rate and cash position
+- Key expense categories
+- Working capital requirements
+
+### Financial Projections
+- 3-5 year revenue projections with assumptions
+- Path to breakeven and profitability
+- Scenario analysis (base, upside, downside)
+- Key metrics and milestones
 
 ### Use of Funds
-[What they'll do with the money]
+- Detailed allocation of raise
+- Expected impact of investment
+- Hiring plans and headcount growth
+- Timeline for deployment
 
-### Expected Returns
-[Potential exit scenarios and multiples]
+## Investment Thesis
+### Why We Should Invest
+- Strategic fit with HTV's thesis
+- Market timing considerations
+- Team capability to execute
+- Potential for venture-scale returns
 
-## Deal Terms
-- Round Size: $X
-- Pre-money Valuation: $X
-- Our Check: $X
-- Ownership: X%
-- Lead/Follow: [Lead/Follow]
-- Other Investors: [List]
+### Value-Add Opportunities
+- How HTV can help beyond capital
+- Relevant portfolio company synergies
+- Network connections and introductions
+- Strategic guidance areas
+
+## Risks & Mitigation
+### Key Risks
+For each major risk category:
+1. Market Risk - [Description and mitigation strategy]
+2. Execution Risk - [Description and mitigation strategy]
+3. Technology Risk - [Description and mitigation strategy]
+4. Competitive Risk - [Description and mitigation strategy]
+5. Regulatory Risk - [Description and mitigation strategy]
+6. Financial Risk - [Description and mitigation strategy]
+
+## Exit Strategy
+### Exit Scenarios
+- Strategic acquirer analysis
+- IPO potential and timeline
+- Comparable exits and valuations
+- Expected exit multiples and returns
+
+### Return Analysis
+- Multiple scenarios with probabilities
+- Expected return profile
+- Portfolio impact analysis
 
 ## Recommendation
-[Clear recommendation with rationale and any conditions]
+### Investment Decision
+- Clear invest/pass recommendation
+- Rationale for the decision
+- Any conditions or requirements
+- Follow-up diligence items
+
+### Proposed Terms
+- Investment amount: $X
+- Pre-money valuation: $X
+- Post-money ownership: X%
+- Board representation: [Yes/No]
+- Key terms and protections
+- Co-investors and allocation
 
 ## Next Steps
-[Specific action items and timeline]
+- Immediate action items with owners
+- Diligence requirements
+- Timeline for decision
+- Key milestones to track post-investment
 
-Write in a professional, data-driven tone. Use specific numbers and examples from the analysis. Be balanced - highlight both opportunities and risks.`
+---
+
+Remember to:
+- Use specific data and numbers throughout
+- Cite sources for market data and claims
+- Balance optimism with realistic assessment
+- Address concerns proactively
+- Write in clear, professional language
+- Make a definitive recommendation`
 
     const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
@@ -191,13 +322,14 @@ Write in a professional, data-driven tone. Use specific numbers and examples fro
       console.error('No memo content in response:', JSON.stringify(response, null, 2))
       throw new Error('Failed to generate memo content')
     }
+    const parsedSections = parseMemoSections(memoText)
     const memoContent = {
       raw: memoText,
-      sections: parseMemoSections(memoText),
+      ...parsedSections,
       metadata: {
         company_name: deal.company.name,
         deal_stage: deal.stage,
-        check_size_range: `$${deal.check_size_min}-${deal.check_size_max}`,
+        check_size_range: `$${deal.check_size_min ? (deal.check_size_min/1000000).toFixed(1) : '?'}M-$${deal.check_size_max ? (deal.check_size_max/1000000).toFixed(1) : '?'}M`,
         generated_at: new Date().toISOString(),
       }
     }
@@ -248,15 +380,47 @@ function parseMemoSections(content: string): Record<string, string> {
   const sections: Record<string, string> = {}
   const lines = content.split('\n')
   let currentSection = ''
+  let currentSubsection = ''
   let currentContent: string[] = []
+  
+  // Map section headers to standardized keys
+  const sectionKeyMap: Record<string, string> = {
+    'Executive Summary': 'executive_summary',
+    'Company Overview': 'company_overview',
+    'Team Assessment': 'team_assessment',
+    'Problem & Solution': 'problem_solution',
+    'Market Opportunity': 'market_opportunity',
+    'Product & Technology': 'product_technology',
+    'Business Model': 'business_model',
+    'Traction & Metrics': 'traction_metrics',
+    'Competitive Analysis': 'competitive_analysis',
+    'Financial Analysis': 'financial_analysis',
+    'Investment Thesis': 'investment_thesis',
+    'Risks & Mitigation': 'risks_mitigation',
+    'Exit Strategy': 'exit_strategy',
+    'Recommendation': 'recommendation',
+    'Next Steps': 'next_steps',
+    'Use of Funds': 'use_of_funds',
+    'Proposed Terms': 'proposed_terms'
+  }
 
   for (const line of lines) {
     if (line.startsWith('## ')) {
+      // Save previous section if exists
       if (currentSection) {
-        sections[currentSection] = currentContent.join('\n').trim()
+        const key = sectionKeyMap[currentSection] || currentSection.toLowerCase().replace(/\s+/g, '_')
+        sections[key] = currentContent.join('\n').trim()
       }
       currentSection = line.substring(3).trim()
+      currentSubsection = ''
       currentContent = []
+    } else if (line.startsWith('### ')) {
+      // Handle subsections - append to current content
+      if (currentSubsection) {
+        currentContent.push('')  // Add spacing between subsections
+      }
+      currentSubsection = line.substring(4).trim()
+      currentContent.push(line)
     } else if (line.startsWith('# ')) {
       sections['title'] = line.substring(2).trim()
     } else {
@@ -264,8 +428,10 @@ function parseMemoSections(content: string): Record<string, string> {
     }
   }
 
+  // Save the last section
   if (currentSection) {
-    sections[currentSection] = currentContent.join('\n').trim()
+    const key = sectionKeyMap[currentSection] || currentSection.toLowerCase().replace(/\s+/g, '_')
+    sections[key] = currentContent.join('\n').trim()
   }
 
   return sections

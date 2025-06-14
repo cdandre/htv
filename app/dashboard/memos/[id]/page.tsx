@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, Download, Edit3, Share2, Clock, FileText, Loader2, Building2, Calendar, FileType } from 'lucide-react'
+import { ArrowLeft, Download, Edit3, Share2, Clock, FileText, Loader2, Building2, Calendar, FileType, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/use-toast'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -18,6 +19,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 interface InvestmentMemo {
   id: string
@@ -41,10 +52,13 @@ interface InvestmentMemo {
 
 export default function MemoDetailPage({ params }: { params: { id: string } }) {
   const { toast } = useToast()
+  const router = useRouter()
   const [exporting, setExporting] = useState(false)
   const [exportingWord, setExportingWord] = useState(false)
   const [loading, setLoading] = useState(true)
   const [memo, setMemo] = useState<InvestmentMemo | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const memoRef = useRef<HTMLDivElement>(null)
   
   useEffect(() => {
@@ -196,6 +210,40 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
     }
   }
   
+  const handleDelete = async () => {
+    try {
+      setDeleting(true)
+      const response = await fetch(`/api/memos/${params.id}`, {
+        method: 'DELETE',
+      })
+      
+      if (response.ok) {
+        toast({
+          title: 'Success',
+          description: 'Investment memo deleted successfully',
+        })
+        router.push('/dashboard/memos')
+      } else {
+        const data = await response.json()
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to delete memo',
+          variant: 'destructive',
+        })
+      }
+    } catch (error) {
+      console.error('Error deleting memo:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to delete memo',
+        variant: 'destructive',
+      })
+    } finally {
+      setDeleting(false)
+      setShowDeleteDialog(false)
+    }
+  }
+  
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -238,9 +286,19 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
             <Share2 className="mr-2 h-4 w-4" />
             Share
           </Button>
-          <Button variant="outline" size="sm">
-            <Edit3 className="mr-2 h-4 w-4" />
-            Edit
+          <Link href={`/dashboard/memos/${params.id}/edit`}>
+            <Button variant="outline" size="sm">
+              <Edit3 className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+          </Link>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setShowDeleteDialog(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -321,29 +379,39 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Executive Summary</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap">{content.executive_summary}</p>
+                  <div className="whitespace-pre-wrap">{content.executive_summary}</div>
                 </div>
               </section>
             )}
 
-            <Separator />
-
-            {/* Investment Thesis */}
-            {content.investment_thesis && (
-              <section>
-                <h2 className="text-xl font-semibold mb-4">Investment Thesis</h2>
-                <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap">{content.investment_thesis}</p>
-                </div>
-              </section>
-            )}
+            {content.executive_summary && content.company_overview && <Separator />}
 
             {/* Company Overview */}
             {content.company_overview && (
               <section>
                 <h2 className="text-xl font-semibold mb-4">Company Overview</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap">{content.company_overview}</p>
+                  <div className="whitespace-pre-wrap">{content.company_overview}</div>
+                </div>
+              </section>
+            )}
+
+            {/* Team Assessment */}
+            {content.team_assessment && (
+              <section>
+                <h2 className="text-xl font-semibold mb-4">Team Assessment</h2>
+                <div className="prose prose-neutral dark:prose-invert max-w-none">
+                  <div className="whitespace-pre-wrap">{content.team_assessment}</div>
+                </div>
+              </section>
+            )}
+
+            {/* Problem & Solution */}
+            {content.problem_solution && (
+              <section>
+                <h2 className="text-xl font-semibold mb-4">Problem & Solution</h2>
+                <div className="prose prose-neutral dark:prose-invert max-w-none">
+                  <div className="whitespace-pre-wrap">{content.problem_solution}</div>
                 </div>
               </section>
             )}
@@ -353,27 +421,27 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Market Opportunity</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap">{content.market_opportunity}</p>
+                  <div className="whitespace-pre-wrap">{content.market_opportunity}</div>
                 </div>
               </section>
             )}
 
-            {/* Team */}
-            {content.team_assessment && (
-              <section>
-                <h2 className="text-xl font-semibold mb-4">Team Assessment</h2>
-                <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap">{content.team_assessment}</p>
-                </div>
-              </section>
-            )}
-
-            {/* Product/Technology */}
+            {/* Product & Technology */}
             {content.product_technology && (
               <section>
                 <h2 className="text-xl font-semibold mb-4">Product & Technology</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap">{content.product_technology}</p>
+                  <div className="whitespace-pre-wrap">{content.product_technology}</div>
+                </div>
+              </section>
+            )}
+
+            {/* Business Model */}
+            {content.business_model && (
+              <section>
+                <h2 className="text-xl font-semibold mb-4">Business Model</h2>
+                <div className="prose prose-neutral dark:prose-invert max-w-none">
+                  <div className="whitespace-pre-wrap">{content.business_model}</div>
                 </div>
               </section>
             )}
@@ -383,7 +451,7 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Traction & Metrics</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap">{content.traction_metrics}</p>
+                  <div className="whitespace-pre-wrap">{content.traction_metrics}</div>
                 </div>
               </section>
             )}
@@ -393,7 +461,7 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Competitive Analysis</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap">{content.competitive_analysis}</p>
+                  <div className="whitespace-pre-wrap">{content.competitive_analysis}</div>
                 </div>
               </section>
             )}
@@ -403,7 +471,27 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Financial Analysis</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap">{content.financial_analysis}</p>
+                  <div className="whitespace-pre-wrap">{content.financial_analysis}</div>
+                </div>
+              </section>
+            )}
+
+            {/* Investment Thesis */}
+            {content.investment_thesis && (
+              <section>
+                <h2 className="text-xl font-semibold mb-4">Investment Thesis</h2>
+                <div className="prose prose-neutral dark:prose-invert max-w-none">
+                  <div className="whitespace-pre-wrap">{content.investment_thesis}</div>
+                </div>
+              </section>
+            )}
+
+            {/* Use of Funds */}
+            {content.use_of_funds && (
+              <section>
+                <h2 className="text-xl font-semibold mb-4">Use of Funds</h2>
+                <div className="prose prose-neutral dark:prose-invert max-w-none">
+                  <div className="whitespace-pre-wrap">{content.use_of_funds}</div>
                 </div>
               </section>
             )}
@@ -413,7 +501,17 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Risks & Mitigation</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap">{content.risks_mitigation}</p>
+                  <div className="whitespace-pre-wrap">{content.risks_mitigation}</div>
+                </div>
+              </section>
+            )}
+
+            {/* Exit Strategy */}
+            {content.exit_strategy && (
+              <section>
+                <h2 className="text-xl font-semibold mb-4">Exit Strategy</h2>
+                <div className="prose prose-neutral dark:prose-invert max-w-none">
+                  <div className="whitespace-pre-wrap">{content.exit_strategy}</div>
                 </div>
               </section>
             )}
@@ -424,24 +522,63 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
                 <h2 className="text-xl font-semibold mb-4">Recommendation</h2>
                 <Card className="bg-muted/50">
                   <CardContent className="p-6">
-                    <p className="whitespace-pre-wrap">{content.recommendation}</p>
+                    <div className="whitespace-pre-wrap">{content.recommendation}</div>
                   </CardContent>
                 </Card>
               </section>
             )}
 
-            {/* Terms */}
+            {/* Proposed Terms */}
             {content.proposed_terms && (
               <section>
                 <h2 className="text-xl font-semibold mb-4">Proposed Terms</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <p className="whitespace-pre-wrap">{content.proposed_terms}</p>
+                  <div className="whitespace-pre-wrap">{content.proposed_terms}</div>
+                </div>
+              </section>
+            )}
+
+            {/* Next Steps */}
+            {content.next_steps && (
+              <section>
+                <h2 className="text-xl font-semibold mb-4">Next Steps</h2>
+                <div className="prose prose-neutral dark:prose-invert max-w-none">
+                  <div className="whitespace-pre-wrap">{content.next_steps}</div>
                 </div>
               </section>
             )}
           </CardContent>
         </div>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Investment Memo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this investment memo? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Memo'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

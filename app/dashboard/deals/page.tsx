@@ -57,7 +57,7 @@ export default function DealsPage() {
           company:companies(*),
           analyst:user_profiles!deals_analyst_id_fkey(*),
           partner:user_profiles!deals_partner_id_fkey(*),
-          documents(id, status),
+          documents(id),
           deal_analyses(id, created_at)
         `)
         .order('created_at', { ascending: false })

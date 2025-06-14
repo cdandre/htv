@@ -221,11 +221,8 @@ export type Database = {
           file_path: string
           file_size: number
           mime_type: string
-          status: 'pending' | 'processing' | 'completed' | 'failed'
           uploaded_by: string | null
-          extracted_text: string | null
           metadata: Json
-          processing_error: string | null
           created_at: string
           updated_at: string
         }
@@ -238,11 +235,8 @@ export type Database = {
           file_path: string
           file_size: number
           mime_type: string
-          status?: 'pending' | 'processing' | 'completed' | 'failed'
           uploaded_by?: string | null
-          extracted_text?: string | null
           metadata?: Json
-          processing_error?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -255,42 +249,10 @@ export type Database = {
           file_path?: string
           file_size?: number
           mime_type?: string
-          status?: 'pending' | 'processing' | 'completed' | 'failed'
           uploaded_by?: string | null
-          extracted_text?: string | null
           metadata?: Json
-          processing_error?: string | null
           created_at?: string
           updated_at?: string
-        }
-      }
-      document_chunks: {
-        Row: {
-          id: string
-          document_id: string
-          chunk_index: number
-          content: string
-          embedding: string | null
-          metadata: Json
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          document_id: string
-          chunk_index: number
-          content: string
-          embedding?: string | null
-          metadata?: Json
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          document_id?: string
-          chunk_index?: number
-          content?: string
-          embedding?: string | null
-          metadata?: Json
-          created_at?: string
         }
       }
       deal_analyses: {

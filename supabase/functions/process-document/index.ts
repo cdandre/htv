@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.47.10'
-import OpenAI from 'https://deno.land/x/openai@v4.20.1/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,7 +20,6 @@ serve(async (req) => {
     const openaiKey = Deno.env.get('OPENAI_API_KEY')!
     
     const supabase = createClient(supabaseUrl, supabaseKey)
-    const openai = new OpenAI({ apiKey: openaiKey })
 
     // Get document details
     const { data: document, error: docError } = await supabase
@@ -59,26 +57,40 @@ serve(async (req) => {
       const arrayBuffer = await fileData.arrayBuffer()
       const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
       
-      // Use GPT-4.1 multimodal to extract text and analyze images
-      const response = await openai.responses.create({
-        model: 'gpt-4.1',
-        input: [
-          {
-            type: 'text',
-            text: 'Extract all text content from this document. Also describe any charts, graphs, or images you see. Format the output as structured text.'
-          },
-          {
-            type: 'document',
-            document: {
-              data: base64,
-              type: 'application/pdf'
-            }
-          }
-        ],
-        store: true,
+      // Use GPT-4.1 with Responses API - direct HTTP call
+      const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4.1',
+          input: `Extract all text content from this PDF document. Also describe any charts, graphs, or images you see. Format the output as structured text.
+
+Note: This is a base64-encoded PDF document that needs text extraction and analysis.`,
+          tools: [{ type: 'web_search' }], // Enable web search if needed
+          store: true,
+        }),
       })
+
+      if (!openaiResponse.ok) {
+        throw new Error(`OpenAI API error: ${openaiResponse.statusText}`)
+      }
+
+      const responseData = await openaiResponse.json()
+      extractedText = responseData.output[0].content[0].text
       
-      extractedText = response.output
+      // Store response ID for potential follow-up analysis
+      await supabase
+        .from('documents')
+        .update({ 
+          metadata: { 
+            ...document.metadata, 
+            response_id: responseData.id 
+          } 
+        })
+        .eq('id', documentId)
     } else {
       // For other file types, we'd implement specific extraction
       extractedText = await fileData.text()
@@ -89,12 +101,24 @@ serve(async (req) => {
     
     // Generate embeddings for each chunk
     for (let i = 0; i < chunks.length; i++) {
-      const embeddingResponse = await openai.embeddings.create({
-        input: chunks[i],
-        model: 'text-embedding-3-small',
+      const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiKey}`,
+        },
+        body: JSON.stringify({
+          input: chunks[i],
+          model: 'text-embedding-3-small',
+        }),
       })
-      
-      const embedding = embeddingResponse.data[0].embedding
+
+      if (!embeddingResponse.ok) {
+        throw new Error(`OpenAI Embeddings API error: ${embeddingResponse.statusText}`)
+      }
+
+      const embeddingData = await embeddingResponse.json()
+      const embedding = embeddingData.data[0].embedding
       
       // Store chunk with embedding
       await supabase.from('document_chunks').insert({
@@ -123,14 +147,23 @@ serve(async (req) => {
     console.error('Error processing document:', error)
     
     // Update document status to failed
-    if (documentId) {
-      await supabase
-        .from('documents')
-        .update({
-          status: 'failed',
-          processing_error: error.message,
-        })
-        .eq('id', documentId)
+    try {
+      const { documentId } = await req.json()
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      const supabase = createClient(supabaseUrl, supabaseKey)
+      
+      if (documentId) {
+        await supabase
+          .from('documents')
+          .update({
+            status: 'failed',
+            processing_error: error.message,
+          })
+          .eq('id', documentId)
+      }
+    } catch (updateError) {
+      console.error('Failed to update document status:', updateError)
     }
     
     return new Response(

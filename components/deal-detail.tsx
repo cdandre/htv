@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Database } from '@/types/database'
 import { 
   Building2, 
@@ -20,7 +20,8 @@ import {
   Download,
   Clock,
   ChevronRight,
-  Upload
+  Upload,
+  Search
 } from 'lucide-react'
 import { format } from 'date-fns'
 import ReactMarkdown from 'react-markdown'
@@ -29,6 +30,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
+import { Input } from '@/components/ui/input'
+import { useToast } from '@/components/ui/use-toast'
 
 type Deal = Database['public']['Tables']['deals']['Row'] & {
   company: Database['public']['Tables']['companies']['Row']
@@ -52,7 +55,11 @@ const stageConfig = {
 }
 
 export default function DealDetail({ deal }: DealDetailProps) {
+  const { toast } = useToast()
   const [generatingMemo, setGeneratingMemo] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searching, setSearching] = useState(false)
 
   const latestAnalysis = deal.deal_analyses
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
@@ -73,6 +80,41 @@ export default function DealDetail({ deal }: DealDetailProps) {
       console.error('Error generating memo:', error)
     } finally {
       setGeneratingMemo(false)
+    }
+  }
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      setSearchResults([])
+      return
+    }
+    
+    try {
+      setSearching(true)
+      const response = await fetch('/api/search/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: searchQuery,
+          dealId: deal.id,
+          limit: 5
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (response.ok) {
+        setSearchResults(data.results || [])
+      }
+    } catch (error) {
+      console.error('Error searching documents:', error)
+      toast({
+        title: 'Search failed',
+        description: 'Failed to search documents. Please try again.',
+        variant: 'destructive'
+      })
+    } finally {
+      setSearching(false)
     }
   }
 
@@ -351,6 +393,54 @@ export default function DealDetail({ deal }: DealDetailProps) {
         <TabsContent value="documents">
           <Card>
             <CardContent className="pt-6">
+              {/* Search Bar */}
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search documents..."
+                    className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  />
+                  {searching && (
+                    <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+                
+                {/* Search Results */}
+                {searchResults.length > 0 && (
+                  <div className="mt-4 space-y-3">
+                    <h4 className="text-sm font-medium text-muted-foreground">Search Results</h4>
+                    {searchResults.map((result) => (
+                      <div key={result.id} className="border rounded-lg p-3 hover:bg-muted/50 cursor-pointer">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              {result.title}
+                            </h4>
+                            {result.relevant_chunks && result.relevant_chunks[0] && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                {result.relevant_chunks[0].content}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Uploaded {format(new Date(result.created_at), 'MMM d, yyyy')}
+                            </p>
+                          </div>
+                          {result.relevant_chunks && result.relevant_chunks[0] && (
+                            <Badge variant="outline" className="ml-2">
+                              {Math.round(result.relevant_chunks[0].similarity * 100)}% match
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               {deal.documents.length > 0 ? (
                 <div className="space-y-3">
                   {deal.documents.map((doc) => (

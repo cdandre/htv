@@ -1,21 +1,203 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { User, Building2, Key, Bell, Shield, Database, Palette } from 'lucide-react'
+import { User, Building2, Key, Bell, Shield, Database, Palette, Loader2 } from 'lucide-react'
+import { useToast } from '@/components/ui/use-toast'
+import { createClient } from '@/lib/supabase/client'
+import { NotificationPreferences } from '@/components/notification-preferences'
+import { IntegrationsSettings } from '@/components/integrations-settings'
 
-export default async function SettingsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+interface UserProfile {
+  id: string
+  full_name: string
+  email: string
+  role: string
+  phone?: string
+  bio?: string
+  organization_id: string
+}
+
+interface Organization {
+  id: string
+  name: string
+  website?: string
+}
+
+export default function SettingsPage() {
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [organization, setOrganization] = useState<Organization | null>(null)
   
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('id', user?.id)
-    .single()
+  // Form states
+  const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [bio, setBio] = useState('')
+  const [orgName, setOrgName] = useState('')
+  const [orgWebsite, setOrgWebsite] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  
+  useEffect(() => {
+    loadUserData()
+  }, [])
+  
+  const loadUserData = async () => {
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        setUser(user)
+        
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        
+        if (profileData) {
+          setProfile(profileData)
+          setFullName(profileData.full_name || '')
+          setPhone(profileData.phone || '')
+          setBio(profileData.bio || '')
+          
+          // Load organization if user is admin
+          if (profileData.role === 'admin' && profileData.organization_id) {
+            const { data: orgData } = await supabase
+              .from('organizations')
+              .select('*')
+              .eq('id', profileData.organization_id)
+              .single()
+            
+            if (orgData) {
+              setOrganization(orgData)
+              setOrgName(orgData.name || '')
+              setOrgWebsite(orgData.website || '')
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const handleSaveProfile = async () => {
+    try {
+      setSaving(true)
+      const response = await fetch('/api/settings/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name: fullName, phone, bio })
+      })
+      
+      if (response.ok) {
+        toast({
+          title: 'Profile updated',
+          description: 'Your profile has been updated successfully'
+        })
+      } else {
+        throw new Error('Failed to update profile')
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update profile',
+        variant: 'destructive'
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+  
+  const handleSaveOrganization = async () => {
+    try {
+      setSaving(true)
+      const response = await fetch('/api/settings/organization', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: orgName, website: orgWebsite })
+      })
+      
+      if (response.ok) {
+        toast({
+          title: 'Organization updated',
+          description: 'Organization settings have been updated successfully'
+        })
+      } else {
+        throw new Error('Failed to update organization')
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update organization',
+        variant: 'destructive'
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+  
+  const handleUpdatePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: 'Password mismatch',
+        description: 'New password and confirmation do not match',
+        variant: 'destructive'
+      })
+      return
+    }
+    
+    try {
+      setSaving(true)
+      const response = await fetch('/api/settings/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword })
+      })
+      
+      if (response.ok) {
+        toast({
+          title: 'Password updated',
+          description: 'Your password has been updated successfully'
+        })
+        setCurrentPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
+      } else {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update password')
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update password',
+        variant: 'destructive'
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+  
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -60,19 +242,38 @@ export default async function SettingsPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Full Name</Label>
-                  <Input id="fullName" defaultValue={profile?.full_name || ''} />
+                  <Input 
+                    id="fullName" 
+                    value={fullName} 
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" defaultValue={user?.email || ''} disabled />
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={user?.email || ''} 
+                    disabled 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
-                  <Input id="role" defaultValue={profile?.role || ''} disabled />
+                  <Input 
+                    id="role" 
+                    value={profile?.role || ''} 
+                    disabled 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
-                  <Input id="phone" type="tel" placeholder="+1 (555) 000-0000" />
+                  <Input 
+                    id="phone" 
+                    type="tel" 
+                    placeholder="+1 (555) 000-0000"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
                 </div>
               </div>
               
@@ -82,11 +283,22 @@ export default async function SettingsPage() {
                   id="bio" 
                   className="w-full min-h-[100px] px-3 py-2 text-sm rounded-md border border-input bg-background"
                   placeholder="Tell us about yourself..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
                 />
               </div>
               
               <div className="flex justify-end">
-                <Button>Save Changes</Button>
+                <Button onClick={handleSaveProfile} disabled={saving}>
+                  {saving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -105,11 +317,22 @@ export default async function SettingsPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="orgName">Organization Name</Label>
-                  <Input id="orgName" defaultValue="HTV Ventures" />
+                  <Input 
+                    id="orgName" 
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                    disabled={profile?.role !== 'admin'}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="orgWebsite">Website</Label>
-                  <Input id="orgWebsite" type="url" defaultValue="https://htv.vc" />
+                  <Input 
+                    id="orgWebsite" 
+                    type="url" 
+                    value={orgWebsite}
+                    onChange={(e) => setOrgWebsite(e.target.value)}
+                    disabled={profile?.role !== 'admin'}
+                  />
                 </div>
               </div>
               
@@ -141,10 +364,24 @@ export default async function SettingsPage() {
                     <Badge variant="secondary">Member</Badge>
                   </div>
                 </div>
-                <Button className="mt-4" variant="outline">
-                  <User className="mr-2 h-4 w-4" />
-                  Invite Team Member
-                </Button>
+                <div className="flex gap-2 mt-4">
+                  <Button variant="outline" disabled={profile?.role !== 'admin'}>
+                    <User className="mr-2 h-4 w-4" />
+                    Invite Team Member
+                  </Button>
+                  {profile?.role === 'admin' && (
+                    <Button onClick={handleSaveOrganization} disabled={saving}>
+                      {saving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Changes'
+                      )}
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -164,17 +401,41 @@ export default async function SettingsPage() {
                 <h3 className="text-lg font-medium">Change Password</h3>
                 <div className="space-y-2">
                   <Label htmlFor="currentPassword">Current Password</Label>
-                  <Input id="currentPassword" type="password" />
+                  <Input 
+                    id="currentPassword" 
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="newPassword">New Password</Label>
-                  <Input id="newPassword" type="password" />
+                  <Input 
+                    id="newPassword" 
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input id="confirmPassword" type="password" />
+                  <Input 
+                    id="confirmPassword" 
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
                 </div>
-                <Button>Update Password</Button>
+                <Button onClick={handleUpdatePassword} disabled={saving}>
+                  {saving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Update Password'
+                  )}
+                </Button>
               </div>
               
               <div className="space-y-4">
@@ -193,122 +454,12 @@ export default async function SettingsPage() {
 
         {/* Notification Settings */}
         <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-              <CardDescription>
-                Choose how you want to be notified about updates
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Email Notifications</p>
-                    <p className="text-sm text-muted-foreground">Receive updates via email</p>
-                  </div>
-                  <Button variant="outline" size="sm">Configure</Button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Deal Updates</p>
-                    <p className="text-sm text-muted-foreground">Get notified when deals progress</p>
-                  </div>
-                  <Button variant="outline" size="sm">Configure</Button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Weekly Digest</p>
-                    <p className="text-sm text-muted-foreground">Summary of weekly activity</p>
-                  </div>
-                  <Button variant="outline" size="sm">Configure</Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <NotificationPreferences />
         </TabsContent>
 
         {/* Integration Settings */}
         <TabsContent value="integrations">
-          <Card>
-            <CardHeader>
-              <CardTitle>Integrations</CardTitle>
-              <CardDescription>
-                Connect with external services and tools
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <Database className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Salesforce</p>
-                          <p className="text-xs text-muted-foreground">CRM Integration</p>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm">Connect</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <Database className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Slack</p>
-                          <p className="text-xs text-muted-foreground">Team Communication</p>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm">Connect</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <Database className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Google Drive</p>
-                          <p className="text-xs text-muted-foreground">Document Storage</p>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm">Connect</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <Database className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Airtable</p>
-                          <p className="text-xs text-muted-foreground">Database Sync</p>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm">Connect</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
+          <IntegrationsSettings />
         </TabsContent>
 
         {/* Appearance Settings */}

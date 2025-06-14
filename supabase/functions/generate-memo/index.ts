@@ -62,17 +62,25 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'gpt-4.1',
-        input: `
-You are a senior venture capital partner writing an investment memo for the partnership.
+        input: `You are a senior venture capital partner writing an investment memo for the partnership.
 
 Company: ${deal.company.name}
 Deal: ${deal.title}
 Stage: ${deal.stage}
 Check Size: $${deal.check_size_min}-${deal.check_size_max}
+Website: ${deal.company.website || 'Not provided'}
+Sector: ${deal.sector || 'Unknown'}
 
-Based on the following analysis, write a professional investment memo:
+Based on the following analysis, write a professional investment memo. Use web search to find the most recent information about market conditions, competitor updates, and regulatory changes since the analysis was completed.
 
 ${latestAnalysis.result.content}
+
+IMPORTANT: Use web search to:
+1. Find the latest news about the company or sector (last 30 days)
+2. Check for any recent competitor funding rounds or exits
+3. Verify current market conditions and any macro changes
+4. Look for recent regulatory updates affecting the sector
+5. Find comparable company valuations and exit multiples
 
 The memo should follow this exact structure:
 
@@ -145,9 +153,11 @@ The memo should follow this exact structure:
 ## Next Steps
 [Specific action items and timeline]
 
-Write in a professional, data-driven tone. Use specific numbers and examples from the analysis. Be balanced - highlight both opportunities and risks.
+Write in a professional, data-driven tone. Use specific numbers and examples from the analysis. Be balanced - highlight both opportunities and risks. Include citations for any external data from web search.
         `,
-        instructions: 'Write like a seasoned VC partner. Be concise but thorough. Use data to support arguments.',
+        instructions: 'Write like a seasoned VC partner. Be concise but thorough. Use data to support arguments. Actively use web search to ensure the memo reflects the most current market conditions.',
+        tools: [{ type: 'web_search' }],
+        tool_choice: 'auto',
         previous_response_id: latestAnalysis.response_id,
         store: true,
       }),

@@ -1,82 +1,28 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
-import { Search, FileText, TrendingUp, Globe, Users, Lightbulb, BookOpen, Plus, Filter, Clock, Eye } from 'lucide-react'
+import { Search, FileText, TrendingUp, Globe, Users, Lightbulb, BookOpen, Plus, Filter, Clock, Eye, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
-// Mock data for knowledge base articles
-const articles = [
-  {
-    id: '1',
-    title: 'AI/ML Investment Thesis 2024',
-    category: 'Investment Thesis',
-    sector: 'AI/ML',
-    author: 'Sarah Chen',
-    date: '2024-01-15',
-    readTime: '8 min',
-    views: 234,
-    excerpt: 'Our comprehensive analysis of AI/ML investment opportunities, focusing on enterprise automation, generative AI, and infrastructure plays.',
-    tags: ['AI', 'ML', 'Enterprise', 'Infrastructure'],
-  },
-  {
-    id: '2',
-    title: 'SaaS Metrics Deep Dive',
-    category: 'Analysis Framework',
-    sector: 'SaaS',
-    author: 'Michael Roberts',
-    date: '2024-01-10',
-    readTime: '12 min',
-    views: 189,
-    excerpt: 'Essential SaaS metrics for evaluating investment opportunities: ARR growth, net retention, CAC payback, and efficiency ratios.',
-    tags: ['SaaS', 'Metrics', 'Due Diligence'],
-  },
-  {
-    id: '3',
-    title: 'Climate Tech Market Map',
-    category: 'Market Research',
-    sector: 'Climate Tech',
-    author: 'Emma Williams',
-    date: '2024-01-08',
-    readTime: '15 min',
-    views: 156,
-    excerpt: 'Comprehensive market map of climate tech sectors including carbon capture, renewable energy, and sustainable agriculture.',
-    tags: ['Climate', 'Sustainability', 'Market Map'],
-  },
-  {
-    id: '4',
-    title: 'Series A Benchmarks 2024',
-    category: 'Benchmarks',
-    sector: 'General',
-    author: 'David Kim',
-    date: '2024-01-05',
-    readTime: '10 min',
-    views: 301,
-    excerpt: 'Updated benchmarks for Series A rounds across different sectors: revenue, growth rates, team size, and valuation multiples.',
-    tags: ['Series A', 'Benchmarks', 'Valuation'],
-  },
-  {
-    id: '5',
-    title: 'Web3 Infrastructure Landscape',
-    category: 'Investment Thesis',
-    sector: 'Web3',
-    author: 'Alex Turner',
-    date: '2023-12-28',
-    readTime: '14 min',
-    views: 178,
-    excerpt: 'Deep dive into Web3 infrastructure opportunities: L1/L2 protocols, developer tools, and enterprise blockchain solutions.',
-    tags: ['Web3', 'Blockchain', 'Infrastructure'],
-  },
-]
 
-const categories = [
-  { name: 'All', count: articles.length },
-  { name: 'Investment Thesis', count: 2 },
-  { name: 'Market Research', count: 1 },
-  { name: 'Analysis Framework', count: 1 },
-  { name: 'Benchmarks', count: 1 },
-]
+interface Article {
+  id: string
+  title: string
+  category: string
+  sector: string
+  author: string
+  created_at: string
+  read_time: string
+  views: number
+  excerpt: string
+  tags: string[]
+}
 
 const sectors = [
   { name: 'AI/ML', icon: Lightbulb },
@@ -87,6 +33,85 @@ const sectors = [
 ]
 
 export default function KnowledgePage() {
+  const router = useRouter()
+  const [articles, setArticles] = useState<Article[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedSector, setSelectedSector] = useState<string | null>(null)
+  
+  const categories = [
+    { name: 'All', value: 'all' },
+    { name: 'Investment Thesis', value: 'Investment Thesis' },
+    { name: 'Market Research', value: 'Market Research' },
+    { name: 'Analysis Framework', value: 'Analysis Framework' },
+    { name: 'Benchmarks', value: 'Benchmarks' },
+  ]
+  
+  useEffect(() => {
+    fetchArticles()
+  }, [selectedCategory, selectedSector])
+  
+  const fetchArticles = async () => {
+    try {
+      setLoading(true)
+      const params = new URLSearchParams()
+      
+      if (selectedCategory !== 'all') {
+        params.append('category', selectedCategory)
+      }
+      
+      if (selectedSector) {
+        params.append('sector', selectedSector)
+      }
+      
+      if (searchQuery) {
+        params.append('search', searchQuery)
+      }
+      
+      const response = await fetch(`/api/knowledge/articles?${params}`)
+      const data = await response.json()
+      
+      if (response.ok) {
+        setArticles(data.articles || [])
+      }
+    } catch (error) {
+      console.error('Error fetching articles:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      fetchArticles()
+      return
+    }
+    
+    try {
+      setLoading(true)
+      const response = await fetch('/api/knowledge/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: searchQuery })
+      })
+      
+      const data = await response.json()
+      
+      if (response.ok) {
+        setArticles(data.results || [])
+      }
+    } catch (error) {
+      console.error('Error searching articles:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const handleCreateArticle = () => {
+    router.push('/dashboard/knowledge/new')
+  }
+  
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -97,7 +122,7 @@ export default function KnowledgePage() {
             Research, frameworks, and insights from the team
           </p>
         </div>
-        <Button size="sm">
+        <Button size="sm" onClick={handleCreateArticle}>
           <Plus className="mr-2 h-4 w-4" />
           New Article
         </Button>
@@ -110,6 +135,9 @@ export default function KnowledgePage() {
           <Input
             placeholder="Search articles, topics, or authors..."
             className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
         </div>
         <Button variant="outline" size="sm">
@@ -123,7 +151,13 @@ export default function KnowledgePage() {
         {sectors.map((sector) => {
           const Icon = sector.icon
           return (
-            <Card key={sector.name} className="hover:border-primary/20 transition-colors cursor-pointer card-hover">
+            <Card 
+              key={sector.name} 
+              className="hover:border-primary/20 transition-colors cursor-pointer card-hover"
+              onClick={() => {
+                setSelectedSector(selectedSector === sector.name ? null : sector.name)
+              }}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -138,18 +172,33 @@ export default function KnowledgePage() {
       </div>
 
       {/* Main Content */}
-      <Tabs defaultValue="all" className="space-y-4">
+      <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="space-y-4">
         <TabsList>
           {categories.map((category) => (
-            <TabsTrigger key={category.name} value={category.name.toLowerCase().replace(' ', '-')}>
+            <TabsTrigger key={category.value} value={category.value}>
               {category.name}
-              <span className="ml-1 text-xs text-muted-foreground">({category.count})</span>
+              <span className="ml-1 text-xs text-muted-foreground">
+                ({category.value === 'all' ? articles.length : articles.filter((a: Article) => a.category === category.value).length})
+              </span>
             </TabsTrigger>
           ))}
         </TabsList>
 
-        <TabsContent value="all" className="space-y-4">
-          {articles.map((article) => (
+        <TabsContent value={selectedCategory} className="space-y-4">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : articles.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <p className="text-muted-foreground">
+                  {searchQuery ? 'No articles found matching your search.' : 'No articles available yet.'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            articles.map((article: Article) => (
             <Card key={article.id} className="hover:border-primary/20 transition-all card-hover">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -177,17 +226,17 @@ export default function KnowledgePage() {
                       </div>
                       <div className="flex items-center">
                         <Clock className="w-4 h-4 mr-1" />
-                        {article.readTime}
+                        {article.read_time}
                       </div>
                       <div className="flex items-center">
                         <Eye className="w-4 h-4 mr-1" />
                         {article.views} views
                       </div>
-                      <span>{new Date(article.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      <span>{new Date(article.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                     </div>
                     
                     <div className="flex flex-wrap gap-2">
-                      {article.tags.map((tag) => (
+                      {article.tags.map((tag: string) => (
                         <Badge key={tag} variant="outline" className="text-xs">
                           {tag}
                         </Badge>
@@ -203,17 +252,10 @@ export default function KnowledgePage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            ))
+          )}
         </TabsContent>
 
-        {/* Other category tabs would show filtered articles */}
-        <TabsContent value="investment-thesis">
-          <p className="text-muted-foreground">Investment thesis articles...</p>
-        </TabsContent>
-        
-        <TabsContent value="market-research">
-          <p className="text-muted-foreground">Market research articles...</p>
-        </TabsContent>
       </Tabs>
     </div>
   )

@@ -131,12 +131,25 @@ export default function AnalyticsPage() {
       const avgDealSize = deals.length > 0 ? totalValue / deals.length : 0
       const conversionRate = deals.length > 0 ? (closedDeals.length / deals.length) * 100 : 0
       
+      // Calculate average time in stage
+      let avgTimeInStage = 0
+      if (deals.length > 0) {
+        const dealAges = deals.map(deal => {
+          const created = new Date(deal.created_at)
+          const now = new Date()
+          const diffTime = Math.abs(now.getTime() - created.getTime())
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+          return diffDays
+        })
+        avgTimeInStage = Math.round(dealAges.reduce((sum, age) => sum + age, 0) / dealAges.length)
+      }
+      
       setMetrics({
         totalDeals: deals.length,
         totalValue,
         avgDealSize,
         conversionRate,
-        avgTimeInStage: 14, // TODO: Calculate actual time in stage
+        avgTimeInStage,
         activeDeals: activeDeals.length,
         closedDeals: closedDeals.length,
         lostDeals: lostDeals.length
@@ -207,8 +220,57 @@ export default function AnalyticsPage() {
   }
   
   const exportData = () => {
-    // TODO: Implement CSV export
-    console.log('Export analytics data')
+    // Prepare CSV data
+    const csvRows = []
+    
+    // Add headers
+    csvRows.push(['Analytics Report', `Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm')}`])
+    csvRows.push(['Time Range', timeRange])
+    csvRows.push([])
+    
+    // Add metrics
+    csvRows.push(['Key Metrics'])
+    csvRows.push(['Total Deals', metrics.totalDeals])
+    csvRows.push(['Active Deals', metrics.activeDeals])
+    csvRows.push(['Closed Deals', metrics.closedDeals])
+    csvRows.push(['Total Value', formatCurrency(metrics.totalValue)])
+    csvRows.push(['Average Deal Size', formatCurrency(metrics.avgDealSize)])
+    csvRows.push(['Conversion Rate', `${metrics.conversionRate.toFixed(1)}%`])
+    csvRows.push(['Average Time in Stage', `${metrics.avgTimeInStage} days`])
+    csvRows.push([])
+    
+    // Add stage distribution
+    csvRows.push(['Stage Distribution'])
+    csvRows.push(['Stage', 'Count', 'Total Value'])
+    stageDistribution.forEach(stage => {
+      csvRows.push([stage.stage, stage.count, formatCurrency(stage.value)])
+    })
+    csvRows.push([])
+    
+    // Add sector breakdown
+    if (sectorBreakdown.length > 0) {
+      csvRows.push(['Sector Breakdown'])
+      csvRows.push(['Sector', 'Count', 'Total Value'])
+      sectorBreakdown.forEach(sector => {
+        csvRows.push([sector.sector, sector.count, formatCurrency(sector.value)])
+      })
+    }
+    
+    // Convert to CSV string
+    const csvContent = csvRows.map(row => row.map(cell => 
+      typeof cell === 'string' && cell.includes(',') ? `"${cell}"` : cell
+    ).join(',')).join('\n')
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const filename = `analytics-export-${format(new Date(), 'yyyy-MM-dd')}.csv`
+    
+    link.href = URL.createObjectURL(blob)
+    link.download = filename
+    link.click()
+    
+    URL.revokeObjectURL(link.href)
   }
   
   if (loading) {

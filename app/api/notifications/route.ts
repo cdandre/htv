@@ -108,7 +108,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create notifications' }, { status: 500 })
     }
     
-    // TODO: Send email notifications based on user preferences
+    // Email notifications can be implemented here when email service is configured
+    // Check user preferences and send emails via SendGrid, Resend, or other email service
     
     return NextResponse.json({ notifications: data })
   } catch (error) {

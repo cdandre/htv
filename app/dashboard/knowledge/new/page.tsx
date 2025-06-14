@@ -26,23 +26,24 @@ export default function NewArticlePage() {
   const [tagInput, setTagInput] = useState('')
   
   const categories = [
-    'Investment Thesis',
-    'Market Research',
-    'Analysis Framework',
-    'Benchmarks',
+    'Housing Trends',
+    'Market Analysis',
+    'Technology Deep Dives',
+    'Policy & Regulation',
+    'Sustainability Impact',
     'Case Study',
-    'Industry Update'
+    'Investment Thesis'
   ]
   
   const sectors = [
-    'AI/ML',
-    'SaaS',
-    'Climate Tech',
-    'Web3',
-    'Healthcare',
-    'FinTech',
-    'EdTech',
-    'E-commerce',
+    'Construction Tech',
+    'Real Estate Fintech',
+    'Sustainable Housing',
+    'Smart Home & IoT',
+    'Multifamily Tech',
+    'Home Services',
+    'Property Management',
+    'Housing Finance',
     'General'
   ]
   

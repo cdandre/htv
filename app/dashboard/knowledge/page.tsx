@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
-import { Search, FileText, TrendingUp, Globe, Users, Lightbulb, BookOpen, Plus, Filter, Clock, Eye, Loader2 } from 'lucide-react'
+import { Search, FileText, TrendingUp, Globe, Users, Lightbulb, BookOpen, Plus, Filter, Clock, Eye, Loader2, Home, Hammer, DollarSign, Leaf, Building2 } from 'lucide-react'
 import Link from 'next/link'
 
 
@@ -25,11 +25,11 @@ interface Article {
 }
 
 const sectors = [
-  { name: 'AI/ML', icon: Lightbulb },
-  { name: 'SaaS', icon: Globe },
-  { name: 'Climate Tech', icon: TrendingUp },
-  { name: 'Web3', icon: Globe },
-  { name: 'Healthcare', icon: Users },
+  { name: 'Construction Tech', icon: Hammer },
+  { name: 'Real Estate Fintech', icon: DollarSign },
+  { name: 'Sustainable Housing', icon: Leaf },
+  { name: 'Smart Home & IoT', icon: Home },
+  { name: 'Multifamily Tech', icon: Building2 },
 ]
 
 export default function KnowledgePage() {
@@ -42,10 +42,11 @@ export default function KnowledgePage() {
   
   const categories = [
     { name: 'All', value: 'all' },
-    { name: 'Investment Thesis', value: 'Investment Thesis' },
-    { name: 'Market Research', value: 'Market Research' },
-    { name: 'Analysis Framework', value: 'Analysis Framework' },
-    { name: 'Benchmarks', value: 'Benchmarks' },
+    { name: 'Housing Trends', value: 'Housing Trends' },
+    { name: 'Market Analysis', value: 'Market Analysis' },
+    { name: 'Technology Deep Dives', value: 'Technology Deep Dives' },
+    { name: 'Policy & Regulation', value: 'Policy & Regulation' },
+    { name: 'Sustainability Impact', value: 'Sustainability Impact' },
   ]
   
   useEffect(() => {
@@ -119,7 +120,7 @@ export default function KnowledgePage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Knowledge Base</h1>
           <p className="text-muted-foreground mt-1">
-            Research, frameworks, and insights from the team
+            Research, insights, and trends shaping the future of home
           </p>
         </div>
         <Button size="sm" onClick={handleCreateArticle}>

@@ -53,21 +53,8 @@ serve(async (req) => {
       throw new Error('No analysis found for this deal')
     }
 
-    // Generate memo using OpenAI API
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openaiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4.1',
-        messages: [{
-          role: 'system',
-          content: 'You are a senior venture capital partner writing an investment memo for the partnership.'
-        }, {
-          role: 'user',
-          content: `
+    // Generate memo using OpenAI Responses API
+    const memoPrompt = `You are a senior venture capital partner writing an investment memo for the partnership.
 
 Company: ${deal.company.name}
 Deal: ${deal.title}
@@ -159,9 +146,19 @@ The memo should follow this exact structure:
 [Specific action items and timeline]
 
 Write in a professional, data-driven tone. Use specific numbers and examples from the analysis. Be balanced - highlight both opportunities and risks.`
-        }],
-        temperature: 0.7,
-        max_tokens: 4000
+
+    const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4.1',
+        input: memoPrompt,
+        tools: [{
+          type: 'web_search'
+        }]
       }),
     })
 
@@ -172,8 +169,28 @@ Write in a professional, data-driven tone. Use specific numbers and examples fro
 
     const response = await openaiResponse.json()
 
-    // Create memo content structure
-    const memoText = response.choices[0].message.content
+    // Extract memo text from Responses API output
+    let memoText = ''
+    if (response.output && Array.isArray(response.output)) {
+      // Handle array output format
+      for (const item of response.output) {
+        if (item.content && Array.isArray(item.content)) {
+          for (const content of item.content) {
+            if (content.text) {
+              memoText += content.text
+            }
+          }
+        }
+      }
+    } else if (response.output_text) {
+      // Handle direct output_text format
+      memoText = response.output_text
+    }
+    
+    if (!memoText) {
+      console.error('No memo content in response:', JSON.stringify(response, null, 2))
+      throw new Error('Failed to generate memo content')
+    }
     const memoContent = {
       raw: memoText,
       sections: parseMemoSections(memoText),

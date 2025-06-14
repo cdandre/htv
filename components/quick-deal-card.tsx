@@ -136,24 +136,7 @@ export default function QuickDealCard({ onSuccess }: QuickDealCardProps) {
           if (document) documentIds.push(document.id)
         }
         
-        // Process documents (optional - don't fail if processing fails)
-        for (const docId of documentIds) {
-          try {
-            const processResponse = await fetch('/api/documents/process', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ documentId: docId })
-            })
-            if (!processResponse.ok) {
-              console.warn('Document processing failed, continuing anyway')
-            }
-          } catch (error) {
-            console.warn('Document processing error:', error)
-          }
-        }
-        
-        // Wait a bit for document processing to complete
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        // No need to process documents anymore - OpenAI handles it directly
         
         // Trigger AI analysis
         const analyzeResponse = await fetch('/api/deals/analyze', {

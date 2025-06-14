@@ -45,65 +45,100 @@ serve(async (req) => {
       throw new Error('Deal not found')
     }
 
-    // Get all document chunks for this deal
-    const documentIds = deal.documents.map((d: any) => d.id)
-    console.log('Document IDs:', documentIds)
+    // Upload documents to OpenAI for file search
     console.log('Number of documents:', deal.documents.length)
     
-    const { data: chunks, error: chunksError } = await supabase
-      .from('document_chunks')
-      .select('*')
-      .in('document_id', documentIds)
-      .order('document_id', { ascending: true })
-      .order('chunk_index', { ascending: true })
+    let vectorStoreId = null
+    let fileIds = []
     
-    if (chunksError) {
-      console.error('Error fetching chunks:', chunksError)
+    if (deal.documents.length > 0) {
+      try {
+        // Create a vector store for this deal's documents
+        const vectorStoreResponse = await fetch('https://api.openai.com/v1/vector_stores', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${openaiKey}`,
+          },
+          body: JSON.stringify({
+            name: `deal-${dealId}-documents`
+          })
+        })
+        
+        if (!vectorStoreResponse.ok) {
+          throw new Error(`Failed to create vector store: ${vectorStoreResponse.statusText}`)
+        }
+        
+        const vectorStore = await vectorStoreResponse.json()
+        vectorStoreId = vectorStore.id
+        console.log('Created vector store:', vectorStoreId)
+        
+        // Upload each document to OpenAI
+        for (const doc of deal.documents) {
+          try {
+            // Download file from Supabase storage
+            const { data: fileData, error: downloadError } = await supabase.storage
+              .from('documents')
+              .download(doc.file_path)
+            
+            if (downloadError) {
+              console.error(`Failed to download ${doc.title}:`, downloadError)
+              continue
+            }
+            
+            // Create form data for file upload
+            const formData = new FormData()
+            formData.append('file', fileData, doc.title)
+            formData.append('purpose', 'assistants')
+            
+            // Upload to OpenAI
+            const fileResponse = await fetch('https://api.openai.com/v1/files', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${openaiKey}`,
+              },
+              body: formData
+            })
+            
+            if (!fileResponse.ok) {
+              console.error(`Failed to upload ${doc.title}:`, await fileResponse.text())
+              continue
+            }
+            
+            const uploadedFile = await fileResponse.json()
+            fileIds.push(uploadedFile.id)
+            
+            // Add file to vector store
+            const attachResponse = await fetch(`https://api.openai.com/v1/vector_stores/${vectorStoreId}/files`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${openaiKey}`,
+              },
+              body: JSON.stringify({
+                file_id: uploadedFile.id
+              })
+            })
+            
+            if (!attachResponse.ok) {
+              console.error(`Failed to attach ${doc.title} to vector store:`, await attachResponse.text())
+            }
+            
+            console.log(`Uploaded ${doc.title} with file ID: ${uploadedFile.id}`)
+          } catch (error) {
+            console.error(`Error processing ${doc.title}:`, error)
+          }
+        }
+        
+        console.log(`Uploaded ${fileIds.length} files to vector store`)
+        
+      } catch (error) {
+        console.error('Error setting up vector store:', error)
+      }
     }
-    
-    console.log('Number of chunks found:', chunks?.length || 0)
 
-    // Concatenate all document content from chunks
-    let documentContent = chunks
-      ?.map(chunk => chunk.content)
-      .join('\n\n') || ''
-    
-    // If no chunks found, try to use extracted_text from documents
-    if (!documentContent && deal.documents.length > 0) {
-      console.log('No chunks found, using extracted_text from documents')
-      documentContent = deal.documents
-        .map((doc: any) => doc.extracted_text || doc.title || '')
-        .filter((text: string) => text.length > 0)
-        .join('\n\n')
-    }
-    
-    // If still no content, use document titles and metadata
-    if (!documentContent && deal.documents.length > 0) {
-      console.log('Using document titles as fallback')
-      documentContent = deal.documents
-        .map((doc: any) => `Document: ${doc.title}\nType: ${doc.mime_type}\nSize: ${doc.file_size} bytes`)
-        .join('\n\n')
-    }
-    
-    console.log('Document content length:', documentContent.length)
-
-    // Create analysis with OpenAI API using Responses API
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openaiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4.1',
-        messages: [{
-          role: 'system',
-          content: `You are an expert venture capital analyst evaluating potential investment opportunities. 
-          Provide thorough, data-driven analysis with numerical scores and structured insights.
-          Always provide scores as numbers between 0-10.`
-        }, {
-          role: 'user',
-          content: `Analyze this investment opportunity:
+    // Create analysis with OpenAI Responses API
+    const analysisPrompt = `Analyze this investment opportunity:
 
 Company: ${deal.company.name}
 Deal: ${deal.title}
@@ -111,8 +146,7 @@ Website: ${deal.company.website || 'Not provided'}
 Sector: ${deal.sector || 'Unknown'}
 Location: ${deal.company.location || 'Unknown'}
 
-Documents provided:
-${documentContent || 'No documents available'}
+${vectorStoreId ? 'Please analyze the uploaded documents and provide insights based on their content.' : 'No documents were provided for analysis.'}
 
 Provide a comprehensive investment analysis as a JSON object with the following structure:
 {
@@ -158,13 +192,28 @@ Provide a comprehensive investment analysis as a JSON object with the following 
     }
   ]
 }`
-        }],
-        response_format: {
-          type: 'json_object'
-        },
-        temperature: 0.7,
-        max_tokens: 4000
-      }),
+
+    // Build the request body
+    const requestBody: any = {
+      model: 'gpt-4.1',
+      input: analysisPrompt,
+    }
+    
+    // Add file search tool if we have documents
+    if (vectorStoreId) {
+      requestBody.tools = [{
+        type: 'file_search',
+        vector_store_ids: [vectorStoreId]
+      }]
+    }
+    
+    const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiKey}`,
+      },
+      body: JSON.stringify(requestBody),
     })
 
     if (!openaiResponse.ok) {
@@ -175,14 +224,37 @@ Provide a comprehensive investment analysis as a JSON object with the following 
 
     const response = await openaiResponse.json()
     
-    // Extract the structured analysis from the response
+    // Extract the structured analysis from the Responses API output
     let analysisData
     try {
-      analysisData = JSON.parse(response.choices[0].message.content)
+      // The Responses API returns output in a different format
+      let outputText = ''
+      if (response.output && Array.isArray(response.output)) {
+        // Handle array output format
+        for (const item of response.output) {
+          if (item.content && Array.isArray(item.content)) {
+            for (const content of item.content) {
+              if (content.text) {
+                outputText += content.text
+              }
+            }
+          }
+        }
+      } else if (response.output_text) {
+        // Handle direct output_text format
+        outputText = response.output_text
+      }
+      
+      if (!outputText) {
+        console.error('No output text found in response:', JSON.stringify(response, null, 2))
+        throw new Error('No analysis content in response')
+      }
+      
+      analysisData = JSON.parse(outputText)
       console.log('Parsed analysis data:', JSON.stringify(analysisData, null, 2))
     } catch (e) {
       console.error('Failed to parse analysis response:', e)
-      console.error('Raw response:', response.choices[0].message.content)
+      console.error('Raw response:', JSON.stringify(response, null, 2))
       throw new Error('Invalid analysis format received')
     }
 

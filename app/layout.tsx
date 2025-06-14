@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { Providers } from '@/components/providers'
 
 export const metadata: Metadata = {
   title: 'HTV | Building the Future of Home',
@@ -15,9 +16,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head />
       <body className="antialiased">
-        <div className="min-h-screen bg-white dark:bg-black">
-          {children}
-        </div>
+        <Providers>
+          <div className="min-h-screen bg-white dark:bg-black">
+            {children}
+          </div>
+        </Providers>
       </body>
     </html>
   )

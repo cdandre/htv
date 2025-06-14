@@ -1,5 +1,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.47.10'
+import OpenAI from 'npm:openai@4.56.0'
+import { toFile } from 'npm:openai@4.56.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,100 +47,59 @@ serve(async (req) => {
       throw new Error('Deal not found')
     }
 
-    // Upload documents to OpenAI for file search
-    console.log('Number of documents:', deal.documents.length)
+    // Initialize OpenAI client
+    const openai = new OpenAI({
+      apiKey: openaiKey,
+    })
     
-    let vectorStoreId = null
-    let fileIds = []
+    // Upload documents to OpenAI
+    console.log('Number of documents:', deal.documents.length)
+    const uploadedFiles = []
     
     if (deal.documents.length > 0) {
-      try {
-        // Create a vector store for this deal's documents
-        const vectorStoreResponse = await fetch('https://api.openai.com/v1/vector_stores', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`,
-          },
-          body: JSON.stringify({
-            name: `deal-${dealId}-documents`
-          })
-        })
-        
-        if (!vectorStoreResponse.ok) {
-          throw new Error(`Failed to create vector store: ${vectorStoreResponse.statusText}`)
-        }
-        
-        const vectorStore = await vectorStoreResponse.json()
-        vectorStoreId = vectorStore.id
-        console.log('Created vector store:', vectorStoreId)
-        
-        // Upload each document to OpenAI
-        for (const doc of deal.documents) {
-          try {
-            // Download file from Supabase storage
-            const { data: fileData, error: downloadError } = await supabase.storage
-              .from('documents')
-              .download(doc.file_path)
-            
-            if (downloadError) {
-              console.error(`Failed to download ${doc.title}:`, downloadError)
-              continue
-            }
-            
-            // Create form data for file upload
-            const formData = new FormData()
-            formData.append('file', fileData, doc.title)
-            formData.append('purpose', 'assistants')
-            
-            // Upload to OpenAI
-            const fileResponse = await fetch('https://api.openai.com/v1/files', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${openaiKey}`,
-              },
-              body: formData
-            })
-            
-            if (!fileResponse.ok) {
-              console.error(`Failed to upload ${doc.title}:`, await fileResponse.text())
-              continue
-            }
-            
-            const uploadedFile = await fileResponse.json()
-            fileIds.push(uploadedFile.id)
-            
-            // Add file to vector store
-            const attachResponse = await fetch(`https://api.openai.com/v1/vector_stores/${vectorStoreId}/files`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${openaiKey}`,
-              },
-              body: JSON.stringify({
-                file_id: uploadedFile.id
-              })
-            })
-            
-            if (!attachResponse.ok) {
-              console.error(`Failed to attach ${doc.title} to vector store:`, await attachResponse.text())
-            }
-            
-            console.log(`Uploaded ${doc.title} with file ID: ${uploadedFile.id}`)
-          } catch (error) {
-            console.error(`Error processing ${doc.title}:`, error)
+      for (const doc of deal.documents) {
+        try {
+          // Download file from Supabase storage
+          const { data: fileData, error: downloadError } = await supabase.storage
+            .from('documents')
+            .download(doc.file_path)
+          
+          if (downloadError) {
+            console.error(`Failed to download ${doc.title}:`, downloadError)
+            continue
           }
+          
+          // Convert blob to Uint8Array
+          const arrayBuffer = await fileData.arrayBuffer()
+          const uint8Array = new Uint8Array(arrayBuffer)
+          
+          // Upload to OpenAI using the Files API
+          console.log(`Uploading ${doc.title} to OpenAI...`)
+          const file = await openai.files.create({
+            file: await toFile(uint8Array, doc.title),
+            purpose: 'user_data' // For use with Responses API
+          })
+          
+          uploadedFiles.push({
+            fileId: file.id,
+            filename: doc.title,
+            type: doc.mime_type
+          })
+          
+          console.log(`Successfully uploaded ${doc.title} with ID: ${file.id}`)
+        } catch (error) {
+          console.error(`Error uploading ${doc.title}:`, error)
         }
-        
-        console.log(`Uploaded ${fileIds.length} files to vector store`)
-        
-      } catch (error) {
-        console.error('Error setting up vector store:', error)
       }
     }
 
-    // Create analysis with OpenAI Responses API
-    const analysisPrompt = `Analyze this investment opportunity:
+    // Build the input for Responses API
+    const inputContent = []
+    
+    // Add text prompt
+    inputContent.push({
+      type: 'input_text',
+      text: `Analyze this investment opportunity:
 
 Company: ${deal.company.name}
 Deal: ${deal.title}
@@ -146,9 +107,23 @@ Website: ${deal.company.website || 'Not provided'}
 Sector: ${deal.sector || 'Unknown'}
 Location: ${deal.company.location || 'Unknown'}
 
-${vectorStoreId ? 'Please analyze the uploaded documents and provide insights based on their content.' : 'No documents were provided for analysis.'}
+${uploadedFiles.length > 0 ? `I have uploaded ${uploadedFiles.length} document(s) for your analysis.` : 'No documents were provided.'}
 
-Provide a comprehensive investment analysis as a JSON object with the following structure:
+Please analyze all provided information and documents thoroughly.
+
+Provide a comprehensive investment analysis as a JSON object with the following structure:`
+    })
+    
+    // Add uploaded files to the input
+    for (const file of uploadedFiles) {
+      inputContent.push({
+        type: 'input_file',
+        file_id: file.fileId
+      })
+    }
+    
+    // Add the JSON structure to the text prompt
+    inputContent[0].text += `
 {
   "executive_summary": "High-level overview of the investment opportunity",
   "scores": {
@@ -193,77 +168,44 @@ Provide a comprehensive investment analysis as a JSON object with the following 
   ]
 }`
 
-    // Build the request body
-    const requestBody: any = {
-      model: 'gpt-4.1',
-      input: analysisPrompt,
-    }
-    
-    // Add file search tool if we have documents
-    if (vectorStoreId) {
-      requestBody.tools = [{
-        type: 'file_search',
-        vector_store_ids: [vectorStoreId]
-      }]
-    }
-    
-    const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openaiKey}`,
-      },
-      body: JSON.stringify(requestBody),
-    })
-
-    if (!openaiResponse.ok) {
-      const error = await openaiResponse.json()
-      console.error('OpenAI API error:', error)
-      throw new Error(error.error?.message || 'Failed to create analysis')
-    }
-
-    const response = await openaiResponse.json()
-    
-    // Extract the structured analysis from the Responses API output
-    let analysisData
+    // Use OpenAI SDK to create the response
     try {
-      // The Responses API returns output in a different format
-      let outputText = ''
-      if (response.output && Array.isArray(response.output)) {
-        // Handle array output format
-        for (const item of response.output) {
-          if (item.content && Array.isArray(item.content)) {
-            for (const content of item.content) {
-              if (content.text) {
-                outputText += content.text
-              }
-            }
-          }
-        }
-      } else if (response.output_text) {
-        // Handle direct output_text format
-        outputText = response.output_text
-      }
+      console.log('Creating analysis with OpenAI Responses API...')
+      const response = await openai.responses.create({
+        model: 'gpt-4.1',
+        input: [{
+          role: 'user',
+          content: inputContent
+        }]
+      })
       
-      if (!outputText) {
-        console.error('No output text found in response:', JSON.stringify(response, null, 2))
-        throw new Error('No analysis content in response')
-      }
-      
-      analysisData = JSON.parse(outputText)
-      console.log('Parsed analysis data:', JSON.stringify(analysisData, null, 2))
-    } catch (e) {
-      console.error('Failed to parse analysis response:', e)
-      console.error('Raw response:', JSON.stringify(response, null, 2))
-      throw new Error('Invalid analysis format received')
-    }
-
-    // Store the analysis using service role key for database operations
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabaseService = createClient(supabaseUrl, supabaseServiceKey)
+      console.log('OpenAI response received')
     
-    // Create deal analysis record
-    const { data: analysis, error: analysisError } = await supabaseService
+      // Extract the structured analysis from the Responses API output
+      let analysisData
+      try {
+        // The SDK response has output_text property
+        const outputText = response.output_text || ''
+        
+        if (!outputText) {
+          console.error('No output text found in response')
+          throw new Error('No analysis content in response')
+        }
+        
+        // Parse the JSON from the response
+        analysisData = JSON.parse(outputText)
+        console.log('Parsed analysis data successfully')
+      } catch (e) {
+        console.error('Failed to parse analysis response:', e)
+        throw new Error('Invalid analysis format received')
+      }
+
+      // Store the analysis using service role key for database operations
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      const supabaseService = createClient(supabaseUrl, supabaseServiceKey)
+      
+      // Create deal analysis record
+      const { data: analysis, error: analysisError } = await supabaseService
       .from('deal_analyses')
       .insert({
         deal_id: dealId,
@@ -291,14 +233,18 @@ Provide a comprehensive investment analysis as a JSON object with the following 
       })
       .eq('id', dealId)
 
-    if (updateError) {
-      console.error('Failed to update deal scores:', updateError)
-    }
+      if (updateError) {
+        console.error('Failed to update deal scores:', updateError)
+      }
 
-    return new Response(
-      JSON.stringify({ success: true, analysis }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+      return new Response(
+        JSON.stringify({ success: true, analysis }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    } catch (openaiError: any) {
+      console.error('OpenAI API error:', openaiError)
+      throw new Error(openaiError.message || 'Failed to create analysis')
+    }
   } catch (error: any) {
     console.error('Error in analyze-deal function:', error)
     return new Response(

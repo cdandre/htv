@@ -111,7 +111,7 @@ export default function DealDocumentUpload({
             organization_id: organizationId,
             title: file.name,
             file_path: fileName,
-            file_type: file.type,
+            mime_type: file.type,
             file_size: file.size,
             uploaded_by: user.id,
             status: 'pending'

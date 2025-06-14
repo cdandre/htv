@@ -122,7 +122,7 @@ export default function QuickDealCard({ onSuccess }: QuickDealCardProps) {
               organization_id: profile.organization_id,
               title: file.name,
               file_path: fileName,
-              file_type: file.type,
+              mime_type: file.type,
               file_size: file.size,
               uploaded_by: user.id,
               status: 'pending'

@@ -32,7 +32,6 @@ interface InvestmentMemo {
     id: string
     title: string
     stage: string
-    sector: string
     company: {
       id: string
       name: string
@@ -63,7 +62,6 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
             id,
             title,
             stage,
-            sector,
             company:companies(
               id,
               name
@@ -299,7 +297,7 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               </Badge>
             </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Company</p>
                 <p className="font-medium">{memo.deal?.company?.name || 'N/A'}</p>
@@ -307,10 +305,6 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <div>
                 <p className="text-muted-foreground">Stage</p>
                 <p className="font-medium">{memo.deal?.stage || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Sector</p>
-                <p className="font-medium">{memo.deal?.sector || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Date</p>

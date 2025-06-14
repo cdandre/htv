@@ -24,7 +24,6 @@ interface MemoData {
       name: string
     }
     stage: string
-    sector: string
   }
 }
 
@@ -56,9 +55,6 @@ export async function exportMemoToWord(memo: MemoData): Promise<Blob> {
         children: [
           new TextRun({ text: 'Stage: ', bold: true }),
           new TextRun(memo.deal.stage),
-          new TextRun({ text: '   |   ' }),
-          new TextRun({ text: 'Sector: ', bold: true }),
-          new TextRun(memo.deal.sector),
           new TextRun({ text: '   |   ' }),
           new TextRun({ text: 'Date: ', bold: true }),
           new TextRun(new Date(memo.created_at).toLocaleDateString())

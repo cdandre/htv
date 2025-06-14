@@ -57,7 +57,7 @@ marked.setOptions({
   gfm: true,
 })
 
-// Format memo content to handle markdown
+// Format memo content to handle markdown and citations
 function formatMemoContent(text: string): string {
   if (!text) return ''
   
@@ -75,6 +75,9 @@ function formatMemoContent(text: string): string {
     .replace(/<p>/g, '<p class="mb-3">')
     .replace(/<strong>/g, '<strong class="font-semibold">')
     .replace(/<em>/g, '<em class="italic">')
+  
+  // Style citations with superscript
+  html = html.replace(/\[(\d+)\]/g, '<sup class="text-primary font-medium ml-0.5">[$1]</sup>')
   
   return html
 }
@@ -626,6 +629,47 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
                   />
                 </div>
               </section>
+            )}
+
+            {/* Sources and Citations */}
+            {content.sources && content.sources.length > 0 && (
+              <>
+                <Separator className="my-8" />
+                <section>
+                  <h2 className="text-xl font-semibold mb-4">Sources & References</h2>
+                  <div className="space-y-3">
+                    {content.sources.map((source: any) => (
+                      <Card key={source.index} className="p-4">
+                        <div className="flex items-start gap-3">
+                          <Badge variant="outline" className="mt-0.5">
+                            [{source.index}]
+                          </Badge>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-sm mb-1">
+                              <a 
+                                href={source.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline"
+                              >
+                                {source.title}
+                              </a>
+                            </h4>
+                            {source.snippet && (
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {source.snippet}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1 truncate">
+                              {source.url}
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </section>
+              </>
             )}
           </CardContent>
         </div>

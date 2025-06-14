@@ -13,6 +13,17 @@ interface MemoContent {
   risks_mitigation?: string
   recommendation?: string
   proposed_terms?: string
+  problem_solution?: string
+  business_model?: string
+  use_of_funds?: string
+  exit_strategy?: string
+  next_steps?: string
+  sources?: Array<{
+    index: number
+    title: string
+    url: string
+    snippet?: string
+  }>
 }
 
 interface MemoData {
@@ -243,6 +254,48 @@ export async function exportMemoToWord(memo: MemoData): Promise<Blob> {
         spacing: { after: 400 }
       })
     )
+  }
+  
+  // Sources and References
+  if (memo.content.sources && memo.content.sources.length > 0) {
+    sections.push(
+      new Paragraph({
+        text: 'Sources & References',
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 600, after: 200 }
+      })
+    )
+    
+    for (const source of memo.content.sources) {
+      sections.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: `[${source.index}] `, bold: true }),
+            new TextRun({ 
+              text: source.title + ' - ',
+              italics: true 
+            }),
+            new TextRun({ 
+              text: source.url,
+              color: '0000FF',
+              underline: {}
+            })
+          ],
+          spacing: { after: 100 }
+        })
+      )
+      
+      if (source.snippet) {
+        sections.push(
+          new Paragraph({
+            text: source.snippet,
+            indent: { left: 720 }, // 0.5 inch indent
+            spacing: { after: 200 },
+            style: 'Quote'
+          })
+        )
+      }
+    }
   }
   
   const doc = new Document({

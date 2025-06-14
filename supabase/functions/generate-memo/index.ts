@@ -272,11 +272,13 @@ For each major risk category:
 
 Remember to:
 - Use specific data and numbers throughout
-- Cite sources for market data and claims
+- Cite sources for market data and claims using markdown links format: [text](url)
+- Include ALL web sources you use as inline citations
 - Balance optimism with realistic assessment
 - Address concerns proactively
 - Write in clear, professional language
-- Make a definitive recommendation`
+- Make a definitive recommendation
+- When citing facts or data from web search, ALWAYS include the source URL`
 
     const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
@@ -288,10 +290,17 @@ Remember to:
         model: 'gpt-4.1',
         input: memoPrompt,
         tools: [{
-          type: 'web_search'
-        }]
+          type: 'web_search',
+          web_search: {
+            max_results: 10,
+            search_depth: 'comprehensive'
+          }
+        }],
+        include: ['web_search_call.results']
       }),
     })
+
+    console.log('OpenAI Responses API called with web_search tool')
 
     if (!openaiResponse.ok) {
       const error = await openaiResponse.json()
@@ -300,17 +309,28 @@ Remember to:
 
     const response = await openaiResponse.json()
 
-    // Extract memo text from Responses API output
+    // Extract memo text and citations from Responses API output
     let memoText = ''
+    let webSources: any[] = []
+    
+    // Extract web search results if included
     if (response.output && Array.isArray(response.output)) {
-      // Handle array output format
       for (const item of response.output) {
+        // Extract text content
         if (item.content && Array.isArray(item.content)) {
           for (const content of item.content) {
             if (content.text) {
               memoText += content.text
             }
+            // Extract annotations/citations
+            if (content.annotations) {
+              webSources = webSources.concat(content.annotations)
+            }
           }
+        }
+        // Extract web search results if available
+        if (item.type === 'web_search_call' && item.results) {
+          webSources = webSources.concat(item.results)
         }
       }
     } else if (response.output_text) {
@@ -322,15 +342,52 @@ Remember to:
       console.error('No memo content in response:', JSON.stringify(response, null, 2))
       throw new Error('Failed to generate memo content')
     }
-    const parsedSections = parseMemoSections(memoText)
+    // Process citations - create a map of sources
+    const sourcesMap = new Map<string, any>()
+    let citationIndex = 1
+    
+    // Process web sources and assign citation numbers
+    for (const source of webSources) {
+      const url = source.url || source.link
+      if (url && !sourcesMap.has(url)) {
+        sourcesMap.set(url, {
+          index: citationIndex++,
+          title: source.title || source.snippet || 'Web Source',
+          url: url,
+          snippet: source.snippet || source.description || ''
+        })
+      }
+    }
+    
+    // Add inline citations to the memo text
+    let citedMemoText = memoText
+    if (sourcesMap.size > 0) {
+      // Replace URLs in text with citation numbers
+      for (const [url, source] of sourcesMap) {
+        const citation = `[${source.index}]`
+        // Replace various URL patterns with citations
+        citedMemoText = citedMemoText.replace(
+          new RegExp(`\\(${escapeRegExp(url)}\\)`, 'g'),
+          citation
+        )
+        citedMemoText = citedMemoText.replace(
+          new RegExp(`\\[([^\\]]+)\\]\\(${escapeRegExp(url)}\\)`, 'g'),
+          `$1 ${citation}`
+        )
+      }
+    }
+    
+    const parsedSections = parseMemoSections(citedMemoText)
     const memoContent = {
-      raw: memoText,
+      raw: citedMemoText,
       ...parsedSections,
+      sources: Array.from(sourcesMap.values()).sort((a, b) => a.index - b.index),
       metadata: {
         company_name: deal.company.name,
         deal_stage: deal.stage,
         check_size_range: `$${deal.check_size_min ? (deal.check_size_min/1000000).toFixed(1) : '?'}M-$${deal.check_size_max ? (deal.check_size_max/1000000).toFixed(1) : '?'}M`,
         generated_at: new Date().toISOString(),
+        sources_count: sourcesMap.size
       }
     }
 
@@ -435,4 +492,9 @@ function parseMemoSections(content: string): Record<string, string> {
   }
 
   return sections
+}
+
+// Helper function to escape special regex characters
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

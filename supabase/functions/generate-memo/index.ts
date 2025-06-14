@@ -53,8 +53,8 @@ serve(async (req) => {
       throw new Error('No analysis found for this deal')
     }
 
-    // Generate memo using OpenAI Responses API
-    const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
+    // Generate memo using OpenAI API
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -62,7 +62,12 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'gpt-4.1',
-        input: `You are a senior venture capital partner writing an investment memo for the partnership.
+        messages: [{
+          role: 'system',
+          content: 'You are a senior venture capital partner writing an investment memo for the partnership.'
+        }, {
+          role: 'user',
+          content: `
 
 Company: ${deal.company.name}
 Deal: ${deal.title}
@@ -73,7 +78,7 @@ Sector: ${deal.sector || 'Unknown'}
 
 Based on the following analysis, write a professional investment memo. Use web search to find the most recent information about market conditions, competitor updates, and regulatory changes since the analysis was completed.
 
-${latestAnalysis.result.content}
+${JSON.stringify(latestAnalysis.result, null, 2)}
 
 IMPORTANT: Use web search to:
 1. Find the latest news about the company or sector (last 30 days)
@@ -153,13 +158,10 @@ The memo should follow this exact structure:
 ## Next Steps
 [Specific action items and timeline]
 
-Write in a professional, data-driven tone. Use specific numbers and examples from the analysis. Be balanced - highlight both opportunities and risks. Include citations for any external data from web search.
-        `,
-        instructions: 'Write like a seasoned VC partner. Be concise but thorough. Use data to support arguments. Actively use web search to ensure the memo reflects the most current market conditions.',
-        tools: [{ type: 'web_search' }],
-        tool_choice: 'auto',
-        previous_response_id: latestAnalysis.response_id,
-        store: true,
+Write in a professional, data-driven tone. Use specific numbers and examples from the analysis. Be balanced - highlight both opportunities and risks.`
+        }],
+        temperature: 0.7,
+        max_tokens: 4000
       }),
     })
 
@@ -171,7 +173,7 @@ Write in a professional, data-driven tone. Use specific numbers and examples fro
     const response = await openaiResponse.json()
 
     // Create memo content structure
-    const memoText = response.output[0].content[0].text
+    const memoText = response.choices[0].message.content
     const memoContent = {
       raw: memoText,
       sections: parseMemoSections(memoText),
@@ -191,11 +193,10 @@ Write in a professional, data-driven tone. Use specific numbers and examples fro
       .from('investment_memos')
       .insert({
         deal_id: dealId,
-        response_id: response.id,
         title: `Investment Memo - ${deal.company.name}`,
         content: memoContent,
         status: 'completed',
-        token_usage: response.usage,
+        token_usage: response.usage || {},
         created_by: user.id,
         version: 1,
       })
@@ -203,14 +204,14 @@ Write in a professional, data-driven tone. Use specific numbers and examples fro
       .single()
 
     if (memoError) {
-      throw memoError
+      console.error('Database error storing memo:', memoError)
+      throw new Error(`Failed to store memo: ${memoError.message}`)
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        memoId: memo.id,
-        responseId: response.id 
+        memoId: memo.id
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

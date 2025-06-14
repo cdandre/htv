@@ -113,6 +113,43 @@ export default function MemosPage() {
     }
   }
   
+  const handleDeleteMemo = async () => {
+    if (!memoToDelete) return
+    
+    try {
+      setDeletingMemoId(memoToDelete.id)
+      const response = await fetch(`/api/memos/${memoToDelete.id}`, {
+        method: 'DELETE',
+      })
+      
+      if (response.ok) {
+        toast({
+          title: 'Success',
+          description: 'Investment memo deleted successfully',
+        })
+        setMemos(memos.filter(m => m.id !== memoToDelete.id))
+      } else {
+        const data = await response.json()
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to delete memo',
+          variant: 'destructive',
+        })
+      }
+    } catch (error) {
+      console.error('Error deleting memo:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to delete memo',
+        variant: 'destructive',
+      })
+    } finally {
+      setDeletingMemoId(null)
+      setShowDeleteDialog(false)
+      setMemoToDelete(null)
+    }
+  }
+
   const filteredMemos = memos.filter(memo => {
     const matchesSearch = searchQuery === '' || 
       memo.deal?.company?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

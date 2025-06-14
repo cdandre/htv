@@ -103,7 +103,7 @@ export default function DealDocumentUpload({
         setUploadingFiles(new Map(newUploading))
         
         // Create document record
-        const { error: dbError } = await supabase
+        const { data: document, error: dbError } = await supabase
           .from('documents')
           .insert({
             deal_id: dealId,
@@ -116,8 +116,19 @@ export default function DealDocumentUpload({
             uploaded_by: user.id,
             status: 'pending'
           })
+          .select()
+          .single()
         
         if (dbError) throw dbError
+        
+        // Process the document
+        if (document) {
+          await fetch('/api/documents/process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ documentId: document.id })
+          })
+        }
         
         // Mark as completed
         newUploading.set(file.name, {
@@ -163,6 +174,9 @@ export default function DealDocumentUpload({
   
   const triggerAnalysis = async () => {
     try {
+      // Wait for document processing to complete
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      
       const response = await fetch('/api/deals/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

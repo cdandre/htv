@@ -47,17 +47,28 @@ serve(async (req) => {
 
     // Get all document chunks for this deal
     const documentIds = deal.documents.map((d: any) => d.id)
-    const { data: chunks } = await supabase
+    console.log('Document IDs:', documentIds)
+    console.log('Number of documents:', deal.documents.length)
+    
+    const { data: chunks, error: chunksError } = await supabase
       .from('document_chunks')
       .select('*')
       .in('document_id', documentIds)
       .order('document_id', { ascending: true })
       .order('chunk_index', { ascending: true })
+    
+    if (chunksError) {
+      console.error('Error fetching chunks:', chunksError)
+    }
+    
+    console.log('Number of chunks found:', chunks?.length || 0)
 
     // Concatenate all document content
     const documentContent = chunks
       ?.map(chunk => chunk.content)
       .join('\n\n') || ''
+    
+    console.log('Document content length:', documentContent.length)
 
     // Create analysis with OpenAI API using Responses API
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {

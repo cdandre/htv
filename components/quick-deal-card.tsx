@@ -106,7 +106,9 @@ export default function QuickDealCard({ onSuccess }: QuickDealCardProps) {
       
       // Upload files if any
       if (files.length > 0) {
-        const uploadPromises = files.map(async (file) => {
+        const documentIds = []
+        
+        for (const file of files) {
           const fileName = `${deal.id}/${Date.now()}-${file.name}`
           const { error: uploadError } = await supabase.storage
             .from('documents')
@@ -114,7 +116,7 @@ export default function QuickDealCard({ onSuccess }: QuickDealCardProps) {
           
           if (uploadError) throw uploadError
           
-          return supabase
+          const { data: document, error: dbError } = await supabase
             .from('documents')
             .insert({
               deal_id: deal.id,
@@ -127,9 +129,24 @@ export default function QuickDealCard({ onSuccess }: QuickDealCardProps) {
               uploaded_by: user.id,
               status: 'pending'
             })
-        })
+            .select()
+            .single()
+          
+          if (dbError) throw dbError
+          if (document) documentIds.push(document.id)
+        }
         
-        await Promise.all(uploadPromises)
+        // Process documents
+        for (const docId of documentIds) {
+          await fetch('/api/documents/process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ documentId: docId })
+          })
+        }
+        
+        // Wait a bit for document processing to complete
+        await new Promise(resolve => setTimeout(resolve, 2000))
         
         // Trigger AI analysis
         const analyzeResponse = await fetch('/api/deals/analyze', {

@@ -3,7 +3,7 @@ import DashboardMetrics from '@/components/dashboard-metrics'
 import PipelineChart from '@/components/pipeline-chart'
 import RecentActivity from '@/components/recent-activity'
 import { Button } from '@/components/ui/button'
-import { Plus, FileText, Upload, TrendingUp, Briefcase, BookOpen, ArrowRight } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function DashboardPage() {
@@ -94,66 +94,6 @@ export default async function DashboardPage() {
         </div>
       </div>
       
-      {/* Quick Links - Minimal Design */}
-      <div>
-        <h2 className="heading-3 text-black dark:text-white mb-6">Quick Actions</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          <Link href="/dashboard/deals" className="group">
-            <div className="card-minimal p-6 hover:shadow-md transition-all duration-200">
-              <div className="flex items-start justify-between mb-4">
-                <Briefcase className="h-6 w-6 text-black dark:text-white" />
-                <ArrowRight className="h-5 w-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-              </div>
-              <h3 className="heading-4 text-black dark:text-white mb-2">
-                Deal Pipeline
-              </h3>
-              <p className="body-small text-gray-600 dark:text-gray-400">
-                View and manage all deals in your pipeline
-              </p>
-              <div className="mt-4 flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-                <TrendingUp className="h-4 w-4" />
-                {deals?.filter(d => d.stage !== 'closed').length || 0} active deals
-              </div>
-            </div>
-          </Link>
-          
-          <Link href="/dashboard/memos" className="group">
-            <div className="card-minimal p-6 hover:shadow-md transition-all duration-200">
-              <div className="flex items-start justify-between mb-4">
-                <FileText className="h-6 w-6 text-black dark:text-white" />
-                <ArrowRight className="h-5 w-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-              </div>
-              <h3 className="heading-4 text-black dark:text-white mb-2">
-                Investment Memos
-              </h3>
-              <p className="body-small text-gray-600 dark:text-gray-400">
-                Generate AI-powered investment memos
-              </p>
-              <div className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                AI-powered analysis
-              </div>
-            </div>
-          </Link>
-          
-          <Link href="/dashboard/knowledge" className="group">
-            <div className="card-minimal p-6 hover:shadow-md transition-all duration-200">
-              <div className="flex items-start justify-between mb-4">
-                <BookOpen className="h-6 w-6 text-black dark:text-white" />
-                <ArrowRight className="h-5 w-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-              </div>
-              <h3 className="heading-4 text-black dark:text-white mb-2">
-                Knowledge Base
-              </h3>
-              <p className="body-small text-gray-600 dark:text-gray-400">
-                Research, insights, and market intelligence
-              </p>
-              <div className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                Centralized insights
-              </div>
-            </div>
-          </Link>
-        </div>
-      </div>
     </div>
   )
 }

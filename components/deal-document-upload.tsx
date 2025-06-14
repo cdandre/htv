@@ -113,8 +113,7 @@ export default function DealDocumentUpload({
             file_path: fileName,
             mime_type: file.type,
             file_size: file.size,
-            uploaded_by: user.id,
-            status: 'pending'
+            uploaded_by: user.id
           })
           .select()
           .single()

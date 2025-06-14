@@ -290,13 +290,8 @@ Remember to:
         model: 'gpt-4.1',
         input: memoPrompt,
         tools: [{
-          type: 'web_search',
-          web_search: {
-            max_results: 10,
-            search_depth: 'comprehensive'
-          }
-        }],
-        include: ['web_search_call.results']
+          type: 'web_search'
+        }]
       }),
     })
 
@@ -308,6 +303,7 @@ Remember to:
     }
 
     const response = await openaiResponse.json()
+    console.log('OpenAI response structure:', JSON.stringify(response, null, 2).substring(0, 500))
 
     // Extract memo text and citations from Responses API output
     let memoText = ''

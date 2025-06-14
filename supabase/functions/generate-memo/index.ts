@@ -56,6 +56,8 @@ serve(async (req) => {
     // Generate memo using OpenAI Responses API
     const memoPrompt = `You are a senior venture capital partner at HTV writing a comprehensive investment memo for the investment committee. Your memo should be thorough, data-driven, and balanced.
 
+CRITICAL: You MUST perform EXTENSIVE web searches throughout your analysis. Do NOT write any section without first searching for relevant, up-to-date information. Search early and often - aim for at least 20-30 different searches to gather comprehensive data.
+
 Company: ${deal.company.name}
 Deal: ${deal.title}
 Stage: ${deal.stage}
@@ -63,19 +65,29 @@ Check Size Range: $${deal.check_size_min ? (deal.check_size_min/1000000).toFixed
 Website: ${deal.company.website || 'Not provided'}
 Location: ${deal.company.location || 'Not provided'}
 
-Based on the following AI analysis, write a comprehensive investment memo. Use web search to find the most recent information about market conditions, competitor updates, regulatory changes, and comparable transactions.
+Based on the following AI analysis, write a comprehensive investment memo. You MUST use web search EXTENSIVELY throughout your analysis. 
+
+For EACH major claim or data point you make, search for supporting evidence. Don't just rely on the provided analysis - actively search for:
+- Latest news about ${deal.company.name}
+- Recent competitor funding rounds and acquisitions
+- Current market size data and growth rates
+- Industry reports and analyst forecasts
+- Regulatory updates in the sector
+- Comparable company valuations and exits
+- Team member backgrounds and previous ventures
+- Customer testimonials and case studies
+- Technology trends affecting the market
 
 ANALYSIS DATA:
 ${JSON.stringify(latestAnalysis.result, null, 2)}
 
-IMPORTANT: Use web search extensively to:
-1. Find the latest news about the company (last 30-60 days)
-2. Research recent competitor funding rounds, acquisitions, or product launches
-3. Analyze current market conditions and macro trends affecting the sector
-4. Identify recent regulatory changes or upcoming regulations
-5. Find comparable company valuations, exits, and multiples
-6. Research the backgrounds of key team members
-7. Validate market size claims with recent analyst reports
+CRITICAL INSTRUCTIONS FOR WEB SEARCH:
+1. Search for SPECIFIC information, not general queries
+2. Use multiple searches for different aspects (e.g., search separately for "${deal.company.name} funding", "${deal.company.name} competitors", "${deal.company.name} team", etc.)
+3. Search for recent data by including year markers (e.g., "2024", "2025", "latest")
+4. Verify all statistics and claims with web searches
+5. Look for contradictory information or risks
+6. Find at least 10-15 different sources throughout your analysis
 
 Write a comprehensive memo (~3,000 words) following this EXACT structure with the sections clearly defined:
 
@@ -272,13 +284,15 @@ For each major risk category:
 
 Remember to:
 - Use specific data and numbers throughout
-- Cite sources for market data and claims using markdown links format: [text](url)
-- Include ALL web sources you use as inline citations
+- When you find information via web search, cite it using markdown format: [source text](url)
+- Include citations for EVERY fact, statistic, or claim from web sources
+- Aim for at least 15-20 citations throughout the memo
 - Balance optimism with realistic assessment
 - Address concerns proactively
 - Write in clear, professional language
 - Make a definitive recommendation
-- When citing facts or data from web search, ALWAYS include the source URL`
+- Use varied search queries to get comprehensive coverage
+- Search for both supporting AND contradictory evidence`
 
     const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
@@ -309,6 +323,10 @@ Remember to:
     let memoText = ''
     let webSources: any[] = []
     
+    // Log to understand response structure better
+    console.log('Response output type:', typeof response.output)
+    console.log('Response keys:', Object.keys(response))
+    
     // Extract web search results if included
     if (response.output && Array.isArray(response.output)) {
       for (const item of response.output) {
@@ -333,6 +351,14 @@ Remember to:
       // Handle direct output_text format
       memoText = response.output_text
     }
+    
+    // Also check for web search results at the top level
+    if (response.web_search_results) {
+      webSources = webSources.concat(response.web_search_results)
+    }
+    
+    console.log('Found web sources count:', webSources.length)
+    console.log('Web sources sample:', webSources.slice(0, 2))
     
     if (!memoText) {
       console.error('No memo content in response:', JSON.stringify(response, null, 2))
@@ -361,16 +387,23 @@ Remember to:
       // Replace URLs in text with citation numbers
       for (const [url, source] of sourcesMap) {
         const citation = `[${source.index}]`
-        // Replace various URL patterns with citations
-        citedMemoText = citedMemoText.replace(
-          new RegExp(`\\(${escapeRegExp(url)}\\)`, 'g'),
-          citation
-        )
-        citedMemoText = citedMemoText.replace(
-          new RegExp(`\\[([^\\]]+)\\]\\(${escapeRegExp(url)}\\)`, 'g'),
-          `$1 ${citation}`
-        )
+        
+        // Replace markdown link format [text](url) with text [citation]
+        const markdownLinkRegex = new RegExp(`\\[([^\\]]+)\\]\\(${escapeRegExp(url)}\\)`, 'g')
+        citedMemoText = citedMemoText.replace(markdownLinkRegex, `$1 ${citation}`)
+        
+        // Replace bare URLs in parentheses (url) with [citation]
+        const bareUrlRegex = new RegExp(`\\(${escapeRegExp(url)}\\)`, 'g')
+        citedMemoText = citedMemoText.replace(bareUrlRegex, citation)
+        
+        // Replace any remaining bare URLs with [citation]
+        const plainUrlRegex = new RegExp(`(?<!\\[)${escapeRegExp(url)}(?!\\])`, 'g')
+        citedMemoText = citedMemoText.replace(plainUrlRegex, citation)
       }
+      
+      // Fix any malformed citations like ([domain][number]) to just [number]
+      citedMemoText = citedMemoText.replace(/\(\[[^\]]+\]\[(\d+)\]\)/g, '[$1]')
+      citedMemoText = citedMemoText.replace(/\[[^\]]+\]\[(\d+)\]/g, '[$1]')
     }
     
     const parsedSections = parseMemoSections(citedMemoText)

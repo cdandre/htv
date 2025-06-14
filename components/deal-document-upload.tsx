@@ -121,13 +121,20 @@ export default function DealDocumentUpload({
         
         if (dbError) throw dbError
         
-        // Process the document
+        // Process the document (optional - don't fail if processing fails)
         if (document) {
-          await fetch('/api/documents/process', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ documentId: document.id })
-          })
+          try {
+            const processResponse = await fetch('/api/documents/process', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ documentId: document.id })
+            })
+            if (!processResponse.ok) {
+              console.warn('Document processing failed, continuing anyway')
+            }
+          } catch (error) {
+            console.warn('Document processing error:', error)
+          }
         }
         
         // Mark as completed

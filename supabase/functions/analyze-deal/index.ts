@@ -63,10 +63,27 @@ serve(async (req) => {
     
     console.log('Number of chunks found:', chunks?.length || 0)
 
-    // Concatenate all document content
-    const documentContent = chunks
+    // Concatenate all document content from chunks
+    let documentContent = chunks
       ?.map(chunk => chunk.content)
       .join('\n\n') || ''
+    
+    // If no chunks found, try to use extracted_text from documents
+    if (!documentContent && deal.documents.length > 0) {
+      console.log('No chunks found, using extracted_text from documents')
+      documentContent = deal.documents
+        .map((doc: any) => doc.extracted_text || doc.title || '')
+        .filter((text: string) => text.length > 0)
+        .join('\n\n')
+    }
+    
+    // If still no content, use document titles and metadata
+    if (!documentContent && deal.documents.length > 0) {
+      console.log('Using document titles as fallback')
+      documentContent = deal.documents
+        .map((doc: any) => `Document: ${doc.title}\nType: ${doc.mime_type}\nSize: ${doc.file_size} bytes`)
+        .join('\n\n')
+    }
     
     console.log('Document content length:', documentContent.length)
 

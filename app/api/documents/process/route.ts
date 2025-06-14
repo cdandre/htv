@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 export async function POST(request: NextRequest) {
   try {
     const { documentId } = await request.json()
+    console.log('Processing document:', documentId)
     const supabase = await createClient()
 
     // Verify user is authenticated
@@ -34,7 +35,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json(data)
+    // Check if the edge function returned an error in the response
+    if (data && data.error) {
+      console.error('Edge function error:', data.error)
+      return NextResponse.json(
+        { error: data.error },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json(data || { success: true })
   } catch (error: any) {
     console.error('Error processing document:', error)
     return NextResponse.json(

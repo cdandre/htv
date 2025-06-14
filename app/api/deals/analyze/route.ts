@@ -34,6 +34,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if the edge function returned an error in the response
+    if (data && data.error) {
+      console.error('Edge function error:', data.error)
+      return NextResponse.json(
+        { error: data.error },
+        { status: 500 }
+      )
+    }
+
     return NextResponse.json(data)
   } catch (error: any) {
     console.error('Error analyzing deal:', error)

@@ -132,19 +132,31 @@ export default function QuickDealCard({ onSuccess }: QuickDealCardProps) {
         await Promise.all(uploadPromises)
         
         // Trigger AI analysis
-        await fetch('/api/deals/analyze', {
+        const analyzeResponse = await fetch('/api/deals/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ dealId: deal.id })
         })
+        
+        let analysisSuccess = true
+        if (!analyzeResponse.ok) {
+          const errorData = await analyzeResponse.json()
+          console.error('Analysis failed:', errorData)
+          analysisSuccess = false
+        }
+        
+        toast({
+          title: 'Deal created successfully',
+          description: analysisSuccess
+            ? 'Documents uploaded and analysis started'
+            : 'Documents uploaded but analysis failed. You can retry analysis later.'
+        })
+      } else {
+        toast({
+          title: 'Deal created successfully',
+          description: 'You can add documents anytime'
+        })
       }
-      
-      toast({
-        title: 'Deal created successfully',
-        description: files.length > 0 
-          ? 'Documents uploaded and analysis started'
-          : 'You can add documents anytime'
-      })
       
       if (onSuccess) onSuccess()
       router.push(`/dashboard/deals/${deal.id}`)

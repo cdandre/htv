@@ -174,9 +174,22 @@ export default function DealDocumentUpload({
           title: 'Analysis started',
           description: 'AI analysis has been triggered for new documents'
         })
+      } else {
+        const errorData = await response.json()
+        console.error('Analysis failed:', errorData)
+        toast({
+          title: 'Analysis could not be started',
+          description: 'Documents uploaded successfully. You can retry analysis later.',
+          variant: 'default'
+        })
       }
     } catch (error) {
       console.error('Failed to trigger analysis:', error)
+      toast({
+        title: 'Analysis could not be started',
+        description: 'Documents uploaded successfully. You can retry analysis later.',
+        variant: 'default'
+      })
     }
   }
   

@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useRouter } from 'next/navigation'
 import DealDocumentUpload from '@/components/deal-document-upload'
+import { cn } from '@/lib/utils'
 
 type Deal = Database['public']['Tables']['deals']['Row'] & {
   company: Database['public']['Tables']['companies']['Row']
@@ -77,6 +78,7 @@ export default function DealDetail({ deal }: DealDetailProps) {
   const [searching, setSearching] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [analyzingDeal, setAnalyzingDeal] = useState(false)
 
   const latestAnalysis = deal.deal_analyses
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
@@ -169,6 +171,53 @@ export default function DealDetail({ deal }: DealDetailProps) {
     }
   }
 
+  const handleAnalyzeDeal = async () => {
+    if (!deal.documents || deal.documents.length === 0) {
+      toast({
+        title: 'No documents',
+        description: 'Please upload documents before running analysis.',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    setAnalyzingDeal(true)
+    
+    try {
+      const response = await fetch('/api/deals/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId: deal.id })
+      })
+      
+      if (response.ok) {
+        toast({
+          title: 'Analysis started',
+          description: 'AI analysis has been triggered. This may take a few moments.',
+        })
+        // Reload page after a delay to show new analysis
+        setTimeout(() => window.location.reload(), 3000)
+      } else {
+        const errorData = await response.json()
+        console.error('Analysis failed:', errorData)
+        toast({
+          title: 'Analysis failed',
+          description: errorData.error || 'Failed to analyze deal. Please try again.',
+          variant: 'destructive'
+        })
+      }
+    } catch (error) {
+      console.error('Error analyzing deal:', error)
+      toast({
+        title: 'Analysis failed',
+        description: 'Failed to analyze deal. Please try again.',
+        variant: 'destructive'
+      })
+    } finally {
+      setAnalyzingDeal(false)
+    }
+  }
+
   const getScoreColor = (score: number | null) => {
     if (!score) return 'text-gray-400'
     if (score >= 8) return 'text-gray-900 dark:text-white'
@@ -179,6 +228,195 @@ export default function DealDetail({ deal }: DealDetailProps) {
   const avgScore = () => {
     const scores = [deal.thesis_fit_score, deal.market_score, deal.team_score, deal.product_score].filter(Boolean) as number[]
     return scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null
+  }
+
+  const renderAnalysis = (analysis: any) => {
+    if (!analysis) return <p className="text-muted-foreground">No analysis data available.</p>
+
+    return (
+      <div className="space-y-6">
+        {/* Executive Summary */}
+        {analysis.executive_summary && (
+          <div>
+            <h3 className="text-lg font-semibold mb-2">Executive Summary</h3>
+            <p className="text-muted-foreground">{analysis.executive_summary}</p>
+          </div>
+        )}
+
+        {/* Scores */}
+        {analysis.scores && (
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Scores</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold">{analysis.scores.team}/10</div>
+                <div className="text-sm text-muted-foreground">Team</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">{analysis.scores.market}/10</div>
+                <div className="text-sm text-muted-foreground">Market</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">{analysis.scores.product}/10</div>
+                <div className="text-sm text-muted-foreground">Product</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">{analysis.scores.thesis_fit}/10</div>
+                <div className="text-sm text-muted-foreground">Thesis Fit</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Team Assessment */}
+        {analysis.team_assessment && (
+          <div>
+            <h3 className="text-lg font-semibold mb-2">Team Assessment</h3>
+            {analysis.team_assessment.strengths && analysis.team_assessment.strengths.length > 0 && (
+              <div className="mb-3">
+                <h4 className="font-medium text-sm mb-1">Strengths</h4>
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                  {analysis.team_assessment.strengths.map((strength: string, i: number) => (
+                    <li key={i}>{strength}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {analysis.team_assessment.concerns && analysis.team_assessment.concerns.length > 0 && (
+              <div className="mb-3">
+                <h4 className="font-medium text-sm mb-1">Concerns</h4>
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                  {analysis.team_assessment.concerns.map((concern: string, i: number) => (
+                    <li key={i}>{concern}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {analysis.team_assessment.background_verification && (
+              <div>
+                <h4 className="font-medium text-sm mb-1">Background Verification</h4>
+                <p className="text-sm text-muted-foreground">{analysis.team_assessment.background_verification}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Market Analysis */}
+        {analysis.market_analysis && (
+          <div>
+            <h3 className="text-lg font-semibold mb-2">Market Analysis</h3>
+            <div className="space-y-2">
+              {analysis.market_analysis.size && (
+                <p className="text-sm"><span className="font-medium">Market Size:</span> <span className="text-muted-foreground">{analysis.market_analysis.size}</span></p>
+              )}
+              {analysis.market_analysis.growth_rate && (
+                <p className="text-sm"><span className="font-medium">Growth Rate:</span> <span className="text-muted-foreground">{analysis.market_analysis.growth_rate}</span></p>
+              )}
+              {analysis.market_analysis.trends && analysis.market_analysis.trends.length > 0 && (
+                <div>
+                  <p className="font-medium text-sm mb-1">Trends</p>
+                  <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                    {analysis.market_analysis.trends.map((trend: string, i: number) => (
+                      <li key={i}>{trend}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {analysis.market_analysis.competitors && analysis.market_analysis.competitors.length > 0 && (
+                <div>
+                  <p className="font-medium text-sm mb-1">Competitors</p>
+                  <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                    {analysis.market_analysis.competitors.map((competitor: string, i: number) => (
+                      <li key={i}>{competitor}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Product Evaluation */}
+        {analysis.product_evaluation && (
+          <div>
+            <h3 className="text-lg font-semibold mb-2">Product Evaluation</h3>
+            <div className="space-y-2">
+              {analysis.product_evaluation.differentiation && (
+                <div>
+                  <p className="font-medium text-sm mb-1">Differentiation</p>
+                  <p className="text-sm text-muted-foreground">{analysis.product_evaluation.differentiation}</p>
+                </div>
+              )}
+              {analysis.product_evaluation.technical_assessment && (
+                <div>
+                  <p className="font-medium text-sm mb-1">Technical Assessment</p>
+                  <p className="text-sm text-muted-foreground">{analysis.product_evaluation.technical_assessment}</p>
+                </div>
+              )}
+              {analysis.product_evaluation.customer_validation && (
+                <div>
+                  <p className="font-medium text-sm mb-1">Customer Validation</p>
+                  <p className="text-sm text-muted-foreground">{analysis.product_evaluation.customer_validation}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Investment Recommendation */}
+        {analysis.investment_recommendation && (
+          <div>
+            <h3 className="text-lg font-semibold mb-2">Investment Recommendation</h3>
+            <div className="space-y-2">
+              {analysis.investment_recommendation.decision && (
+                <Badge className={cn(
+                  "mb-2",
+                  analysis.investment_recommendation.decision === 'invest' && "bg-green-100 text-green-800",
+                  analysis.investment_recommendation.decision === 'explore' && "bg-yellow-100 text-yellow-800",
+                  analysis.investment_recommendation.decision === 'pass' && "bg-red-100 text-red-800"
+                )}>
+                  {analysis.investment_recommendation.decision.toUpperCase()}
+                </Badge>
+              )}
+              {analysis.investment_recommendation.rationale && (
+                <p className="text-sm text-muted-foreground">{analysis.investment_recommendation.rationale}</p>
+              )}
+              {analysis.investment_recommendation.next_steps && analysis.investment_recommendation.next_steps.length > 0 && (
+                <div>
+                  <p className="font-medium text-sm mb-1">Next Steps</p>
+                  <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                    {analysis.investment_recommendation.next_steps.map((step: string, i: number) => (
+                      <li key={i}>{step}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Risks */}
+        {analysis.risks && analysis.risks.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold mb-2">Key Risks</h3>
+            <div className="space-y-3">
+              {analysis.risks.map((risk: any, i: number) => (
+                <div key={i} className="border rounded-lg p-3">
+                  <div className="flex items-start justify-between mb-1">
+                    <p className="font-medium text-sm">{risk.category}</p>
+                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-2">{risk.description}</p>
+                  {risk.mitigation && (
+                    <p className="text-xs text-muted-foreground"><span className="font-medium">Mitigation:</span> {risk.mitigation}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -467,18 +705,63 @@ export default function DealDetail({ deal }: DealDetailProps) {
           <Card>
             <CardContent className="pt-6">
               {latestAnalysis ? (
-                <div className="prose prose-sm max-w-none">
-                  <ReactMarkdown>
-                    {(latestAnalysis.result as any)?.content || 'No analysis content available'}
-                  </ReactMarkdown>
+                <div className="space-y-4">
+                  {/* Retry Analysis Button */}
+                  {deal.documents && deal.documents.length > 0 && (
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={handleAnalyzeDeal}
+                        disabled={analyzingDeal}
+                        size="sm"
+                        variant="outline"
+                      >
+                        {analyzingDeal ? (
+                          <>
+                            <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                            Analyzing...
+                          </>
+                        ) : (
+                          <>
+                            <Target className="mr-2 h-4 w-4" />
+                            Re-run Analysis
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                  {renderAnalysis(latestAnalysis.result as any)}
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <Target className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                   <p className="text-muted-foreground">No analysis available yet.</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Upload documents to generate an AI analysis.
-                  </p>
+                  {deal.documents && deal.documents.length > 0 ? (
+                    <>
+                      <p className="text-sm text-muted-foreground mt-1 mb-4">
+                        Documents found. Click below to run AI analysis.
+                      </p>
+                      <Button
+                        onClick={handleAnalyzeDeal}
+                        disabled={analyzingDeal}
+                      >
+                        {analyzingDeal ? (
+                          <>
+                            <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                            Analyzing...
+                          </>
+                        ) : (
+                          <>
+                            <Target className="mr-2 h-4 w-4" />
+                            Run Analysis
+                          </>
+                        )}
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Upload documents to generate an AI analysis.
+                    </p>
+                  )}
                 </div>
               )}
             </CardContent>

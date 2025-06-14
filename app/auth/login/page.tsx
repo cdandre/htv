@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import HTVLogo from '@/components/htv-logo'
+import { AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -12,7 +13,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+  
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam === 'account_deactivated') {
+      setError('Your account has been deactivated. Please contact your administrator.')
+    }
+  }, [searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -104,10 +113,7 @@ export default function LoginPage() {
             </button>
             
             <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-              Don't have an account?{' '}
-              <Link href="/auth/signup" className="font-medium text-black dark:text-white hover:underline">
-                Create one
-              </Link>
+              Need access? Contact your administrator for an invitation.
             </p>
           </div>
         </form>

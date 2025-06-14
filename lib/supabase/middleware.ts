@@ -58,5 +58,39 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Check if user is active and has proper permissions
+  if (user && request.nextUrl.pathname.startsWith('/dashboard')) {
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('is_active, role')
+      .eq('id', user.id)
+      .single()
+
+    // Check if user is deactivated
+    if (!profile || profile.is_active === false) {
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/login'
+      url.searchParams.set('error', 'account_deactivated')
+      return NextResponse.redirect(url)
+    }
+
+    // Check admin routes
+    if (request.nextUrl.pathname.startsWith('/dashboard/admin')) {
+      if (profile.role !== 'admin') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+      }
+    }
+  }
+
+  // Redirect authenticated users away from auth pages
+  if (user && request.nextUrl.pathname.startsWith('/auth/')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
+  }
+
   return supabaseResponse
 }

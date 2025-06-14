@@ -4,10 +4,11 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/database'
-import { FileText, Upload, BarChart3, LogOut, User, Home, BookOpen, Settings, Bell, Search, Menu, ChevronDown, Briefcase } from 'lucide-react'
+import { FileText, Upload, BarChart3, LogOut, User, Users, Home, BookOpen, Settings, Bell, Search, Menu, ChevronDown, Briefcase } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import HTVLogo from '@/components/htv-logo'
+import { NotificationBell } from '@/components/notification-bell'
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row']
 
@@ -32,6 +33,7 @@ export default function DashboardNav({ user }: DashboardNavProps) {
     { name: 'Deals', href: '/dashboard/deals', icon: Briefcase },
     { name: 'Upload', href: '/dashboard/upload', icon: Upload },
     { name: 'Memos', href: '/dashboard/memos', icon: FileText },
+    { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
     { name: 'Knowledge', href: '/dashboard/knowledge', icon: BookOpen },
   ]
 
@@ -83,10 +85,7 @@ export default function DashboardNav({ user }: DashboardNavProps) {
             </button>
             
             {/* Notifications */}
-            <button className="relative p-2 text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-black dark:bg-white rounded-full" />
-            </button>
+            <NotificationBell />
             
             {/* User Menu */}
             <div className="hidden md:block relative">
@@ -128,6 +127,16 @@ export default function DashboardNav({ user }: DashboardNavProps) {
                       <Settings className="w-4 h-4 mr-3" />
                       Settings
                     </Link>
+                    {user?.role === 'admin' && (
+                      <Link
+                        href="/dashboard/admin/users"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                      >
+                        <Users className="w-4 h-4 mr-3" />
+                        User Management
+                      </Link>
+                    )}
                     <hr className="my-2 border-gray-200 dark:border-gray-800" />
                     <button
                       onClick={handleSignOut}
@@ -185,6 +194,16 @@ export default function DashboardNav({ user }: DashboardNavProps) {
               <Settings className="w-5 h-5 mr-3" />
               Settings
             </Link>
+            {user?.role === 'admin' && (
+              <Link
+                href="/dashboard/admin/users"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-sm transition-colors"
+              >
+                <Users className="w-5 h-5 mr-3" />
+                User Management
+              </Link>
+            )}
             <button
               onClick={() => {
                 setMobileMenuOpen(false)

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import HTVLogo from '@/components/htv-logo'
 import { AlertCircle, Mail, Shield, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { SecureForm } from '@/components/secure-form'
 
 interface InvitationDetails {
   email: string
@@ -184,7 +185,7 @@ export default function SignupPage() {
               </div>
             </div>
             
-            <form className="mt-8 space-y-6" onSubmit={handleSignup}>
+            <SecureForm className="mt-8 space-y-6" onSubmit={handleSignup}>
               {error && (
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-sm">
                   <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
@@ -265,7 +266,7 @@ export default function SignupPage() {
                   </Link>
                 </p>
               </div>
-            </form>
+            </SecureForm>
           </>
         )}
         

@@ -22,7 +22,8 @@ import {
   ChevronRight,
   Upload,
   Search,
-  Edit3
+  Edit3,
+  Trash2
 } from 'lucide-react'
 import { format } from 'date-fns'
 import ReactMarkdown from 'react-markdown'
@@ -33,6 +34,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/use-toast'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { useRouter } from 'next/navigation'
 
 type Deal = Database['public']['Tables']['deals']['Row'] & {
   company: Database['public']['Tables']['companies']['Row']
@@ -57,10 +69,13 @@ const stageConfig = {
 
 export default function DealDetail({ deal }: DealDetailProps) {
   const { toast } = useToast()
+  const router = useRouter()
   const [generatingMemo, setGeneratingMemo] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searching, setSearching] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const latestAnalysis = deal.deal_analyses
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
@@ -116,6 +131,40 @@ export default function DealDetail({ deal }: DealDetailProps) {
       })
     } finally {
       setSearching(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      const response = await fetch(`/api/deals/${deal.id}`, {
+        method: 'DELETE',
+      })
+      
+      if (response.ok) {
+        toast({
+          title: 'Deal deleted',
+          description: 'The deal has been successfully deleted.',
+        })
+        router.push('/dashboard/deals')
+      } else {
+        const error = await response.json()
+        toast({
+          title: 'Delete failed',
+          description: error.error || 'Failed to delete deal. Please try again.',
+          variant: 'destructive'
+        })
+      }
+    } catch (error) {
+      console.error('Error deleting deal:', error)
+      toast({
+        title: 'Delete failed',
+        description: 'Failed to delete deal. Please try again.',
+        variant: 'destructive'
+      })
+    } finally {
+      setDeleting(false)
+      setShowDeleteDialog(false)
     }
   }
 
@@ -190,6 +239,14 @@ export default function DealDetail({ deal }: DealDetailProps) {
                     Generate Memo
                   </>
                 )}
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowDeleteDialog(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
               </Button>
             </div>
           </div>
@@ -555,6 +612,41 @@ export default function DealDetail({ deal }: DealDetailProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Deal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deal.company.name}"? This action cannot be undone and will permanently delete:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>All deal information and scores</li>
+                <li>All uploaded documents</li>
+                <li>All AI analyses</li>
+                <li>All investment memos</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Deal'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

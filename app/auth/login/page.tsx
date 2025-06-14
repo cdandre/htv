@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import HTVLogo from '@/components/htv-logo'
 import { AlertCircle } from 'lucide-react'
+import { SecureForm } from '@/components/secure-form'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -25,6 +26,17 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
+    
+    // Log to ensure form submission is intercepted
+    console.log('Login form submitted via JavaScript handler')
+    
+    // Extra safety check
+    if (!email || !password) {
+      setError('Please enter both email and password')
+      return
+    }
+    
     setLoading(true)
     setError(null)
 
@@ -36,11 +48,13 @@ export default function LoginPage() {
 
       if (error) throw error
 
+      // Clear sensitive data before navigation
+      setPassword('')
+      
       router.push('/dashboard')
       router.refresh()
     } catch (error: any) {
       setError(error.message)
-    } finally {
       setLoading(false)
     }
   }
@@ -60,7 +74,7 @@ export default function LoginPage() {
           </p>
         </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+        <SecureForm className="mt-8 space-y-6" onSubmit={handleLogin}>
           {error && (
             <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-sm">
               <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
@@ -76,7 +90,7 @@ export default function LoginPage() {
                 id="email"
                 name="email"
                 type="email"
-                autoComplete="email"
+                autoComplete="username email"
                 required
                 className="appearance-none relative block w-full px-4 py-3 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-black dark:text-white bg-white dark:bg-black rounded-sm focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-black dark:focus:border-white"
                 placeholder="you@example.com"
@@ -116,7 +130,7 @@ export default function LoginPage() {
               Need access? Contact your administrator for an invitation.
             </p>
           </div>
-        </form>
+        </SecureForm>
         
         <div className="text-center">
           <p className="text-xs uppercase tracking-widest text-gray-500 dark:text-gray-500">

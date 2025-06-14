@@ -6,18 +6,34 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { FileText, Search, Calendar, Building2, ChevronRight, Loader2 } from 'lucide-react'
+import { FileText, Search, Calendar, Building2, ChevronRight, Loader2, Trash2, MoreVertical } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
 import { format } from 'date-fns'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 interface InvestmentMemo {
   id: string
   deal_id: string
   title: string
   content: any
-  status: 'draft' | 'final' | 'completed'
+  status: 'pending' | 'processing' | 'completed' | 'failed'
   version: number
   created_at: string
   updated_at: string
@@ -34,12 +50,30 @@ interface InvestmentMemo {
   }
 }
 
+// Strip markdown formatting for preview
+function stripMarkdown(text: string): string {
+  if (!text) return ''
+  return text
+    .replace(/#{1,6}\s/g, '') // Remove headers
+    .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold
+    .replace(/\*([^*]+)\*/g, '$1') // Remove italic
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links
+    .replace(/^[-*+]\s/gm, '') // Remove bullet points
+    .replace(/^\d+\.\s/gm, '') // Remove numbered lists
+    .replace(/\n{2,}/g, ' ') // Replace multiple newlines with space
+    .replace(/\n/g, ' ') // Replace single newlines with space
+    .trim()
+}
+
 export default function MemosPage() {
   const { toast } = useToast()
   const [memos, setMemos] = useState<InvestmentMemo[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [deletingMemoId, setDeletingMemoId] = useState<string | null>(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [memoToDelete, setMemoToDelete] = useState<InvestmentMemo | null>(null)
   
   useEffect(() => {
     fetchMemos()
@@ -172,8 +206,10 @@ export default function MemosPage() {
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge variant={memo.status === 'completed' ? 'default' : memo.status === 'final' ? 'default' : 'secondary'}>
-                    {memo.status === 'completed' ? 'Completed' : memo.status === 'final' ? 'Final' : 'Draft'}
+                  <Badge variant={memo.status === 'completed' ? 'default' : memo.status === 'failed' ? 'destructive' : 'secondary'}>
+                    {memo.status === 'completed' ? 'Completed' : 
+                     memo.status === 'processing' ? 'Processing' : 
+                     memo.status === 'failed' ? 'Failed' : 'Pending'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -200,27 +236,82 @@ export default function MemosPage() {
                   {memo.content?.executive_summary && (
                     <div className="pt-3 border-t">
                       <p className="text-sm text-muted-foreground line-clamp-3">
-                        {memo.content.executive_summary}
+                        {stripMarkdown(memo.content.executive_summary)}
                       </p>
                     </div>
                   )}
                   
-                  <Button 
-                    asChild 
-                    variant="outline" 
-                    className="w-full mt-4"
-                  >
-                    <Link href={`/dashboard/memos/${memo.id}`}>
-                      View Memo
-                      <ChevronRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
+                  <div className="flex gap-2 mt-4">
+                    <Button 
+                      asChild 
+                      variant="outline" 
+                      className="flex-1"
+                    >
+                      <Link href={`/dashboard/memos/${memo.id}`}>
+                        View Memo
+                        <ChevronRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/memos/${memo.id}/edit`}>
+                            Edit Memo
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setMemoToDelete(memo)
+                            setShowDeleteDialog(true)
+                          }}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Memo
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Investment Memo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the investment memo for {memoToDelete?.deal?.company?.name || 'this company'}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!deletingMemoId}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteMemo}
+              disabled={!!deletingMemoId}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingMemoId ? (
+                <>
+                  <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Memo'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

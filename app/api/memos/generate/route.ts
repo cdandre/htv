@@ -36,7 +36,15 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Edge function response:', data)
-    return NextResponse.json(data)
+    
+    // Ensure we return the memoId from the edge function response
+    if (data && data.memoId) {
+      return NextResponse.json({ success: true, memoId: data.memoId })
+    } else if (data) {
+      return NextResponse.json(data)
+    } else {
+      return NextResponse.json({ error: 'No response from edge function' }, { status: 500 })
+    }
   } catch (error: any) {
     console.error('Error generating memo:', error)
     return NextResponse.json(

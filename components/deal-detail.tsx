@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Database } from '@/types/database'
 import { 
   Building2, 
@@ -95,12 +96,15 @@ export default function DealDetail({ deal }: DealDetailProps) {
       
       const data = await response.json()
       
-      if (response.ok) {
+      if (response.ok && data.memoId) {
         toast({
           title: 'Success',
-          description: 'Investment memo generated successfully',
+          description: 'Investment memo generated successfully. Redirecting...',
         })
-        window.location.reload()
+        // Redirect to the generated memo
+        setTimeout(() => {
+          window.location.href = `/dashboard/memos/${data.memoId}`
+        }, 1000)
       } else {
         toast({
           title: 'Error',

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/database'
-import { FileText, Upload, BarChart3, LogOut, User, Users, Home, BookOpen, Settings, Bell, Search, Menu, ChevronDown, Briefcase } from 'lucide-react'
+import { FileText, BarChart3, LogOut, User, Users, Home, BookOpen, Settings, Bell, Search, Menu, ChevronDown, Briefcase } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import HTVLogo from '@/components/htv-logo'
@@ -31,7 +31,6 @@ export default function DashboardNav({ user }: DashboardNavProps) {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Deals', href: '/dashboard/deals', icon: Briefcase },
-    { name: 'Upload', href: '/dashboard/upload', icon: Upload },
     { name: 'Memos', href: '/dashboard/memos', icon: FileText },
     { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
     { name: 'Knowledge', href: '/dashboard/knowledge', icon: BookOpen },

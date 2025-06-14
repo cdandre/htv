@@ -1,21 +1,85 @@
-import { createClient } from '@/lib/supabase/server'
-import DealPipeline from '@/components/deal-pipeline'
-import { Button } from '@/components/ui/button'
-import { Plus, Filter, Download } from 'lucide-react'
-import Link from 'next/link'
+'use client'
 
-export default async function DealsPage() {
-  const supabase = await createClient()
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import DealPipeline from '@/components/deal-pipeline'
+import QuickDealCard from '@/components/quick-deal-card'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Plus, Filter, Download, Zap, X } from 'lucide-react'
+import Link from 'next/link'
+import { useToast } from '@/components/ui/use-toast'
+
+interface Deal {
+  id: string
+  created_at: string
+  updated_at: string
+  organization_id: string
+  company_id: string
+  title: string
+  stage: string
+  analyst_id: string | null
+  partner_id: string | null
+  check_size_min: number | null
+  check_size_max: number | null
+  valuation: number | null
+  round_size: number | null
+  round_type: string | null
+  thesis_fit_score: number | null
+  market_score: number | null
+  team_score: number | null
+  product_score: number | null
+  notes: string | null
+  company: any
+  analyst: any
+  partner: any
+  documents?: any[]
+  deal_analyses?: any[]
+}
+
+export default function DealsPage() {
+  const [deals, setDeals] = useState<Deal[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showQuickAdd, setShowQuickAdd] = useState(false)
+  const { toast } = useToast()
+  const supabase = createClient()
   
-  const { data: deals } = await supabase
-    .from('deals')
-    .select(`
-      *,
-      company:companies(*),
-      analyst:user_profiles!deals_analyst_id_fkey(*),
-      partner:user_profiles!deals_partner_id_fkey(*)
-    `)
-    .order('created_at', { ascending: false })
+  useEffect(() => {
+    fetchDeals()
+  }, [])
+  
+  const fetchDeals = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('deals')
+        .select(`
+          *,
+          company:companies(*),
+          analyst:user_profiles!deals_analyst_id_fkey(*),
+          partner:user_profiles!deals_partner_id_fkey(*),
+          documents(id, status),
+          deal_analyses(id, created_at)
+        `)
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      setDeals(data || [])
+    } catch (error) {
+      console.error('Error fetching deals:', error)
+      toast({
+        title: 'Error loading deals',
+        description: 'Please refresh the page to try again',
+        variant: 'destructive'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const handleQuickAddSuccess = () => {
+    setShowQuickAdd(false)
+    fetchDeals() // Refresh the list
+  }
 
   return (
     <div className="space-y-8">
@@ -38,17 +102,75 @@ export default async function DealsPage() {
               Export
             </Button>
             <Link href="/dashboard/deals/new">
-              <Button size="default" className="btn-primary">
+              <Button variant="outline" size="default" className="border-gray-300 dark:border-gray-700">
                 <Plus className="mr-2 h-4 w-4" />
-                New Deal
+                Full Form
               </Button>
             </Link>
+            <Button 
+              size="default" 
+              className="btn-primary"
+              onClick={() => setShowQuickAdd(!showQuickAdd)}
+            >
+              {showQuickAdd ? (
+                <>
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </>
+              ) : (
+                <>
+                  <Zap className="mr-2 h-4 w-4" />
+                  Quick Add
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </div>
       
+      {/* Quick Add Card */}
+      {showQuickAdd && (
+        <div className="animate-in slide-in-from-top-2 duration-300">
+          <Card className="p-2 bg-primary/5 border-primary/20">
+            <QuickDealCard onSuccess={handleQuickAddSuccess} />
+          </Card>
+        </div>
+      )}
+      
+      {/* Stats Bar */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="p-4">
+          <div className="text-2xl font-bold">{deals.length}</div>
+          <p className="text-sm text-muted-foreground">Total Deals</p>
+        </Card>
+        <Card className="p-4">
+          <div className="text-2xl font-bold">
+            {deals.filter(d => d.documents && d.documents.length > 0).length}
+          </div>
+          <p className="text-sm text-muted-foreground">With Documents</p>
+        </Card>
+        <Card className="p-4">
+          <div className="text-2xl font-bold">
+            {deals.filter(d => d.deal_analyses && d.deal_analyses.length > 0).length}
+          </div>
+          <p className="text-sm text-muted-foreground">Analyzed</p>
+        </Card>
+        <Card className="p-4">
+          <div className="text-2xl font-bold">
+            {deals.filter(d => d.stage === 'closed').length}
+          </div>
+          <p className="text-sm text-muted-foreground">Closed</p>
+        </Card>
+      </div>
+      
       {/* Deal Pipeline Component */}
-      <DealPipeline deals={deals || []} />
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <DealPipeline deals={deals} />
+      )}
     </div>
   )
 }

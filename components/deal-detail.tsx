@@ -45,6 +45,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useRouter } from 'next/navigation'
+import DealDocumentUpload from '@/components/deal-document-upload'
 
 type Deal = Database['public']['Tables']['deals']['Row'] & {
   company: Database['public']['Tables']['companies']['Row']
@@ -377,7 +378,33 @@ export default function DealDetail({ deal }: DealDetailProps) {
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview">
+        <TabsContent value="overview" className="space-y-6">
+          {/* Quick Upload Section - Only show if no documents */}
+          {(!deal.documents || deal.documents.length === 0) && (
+            <Card className="border-dashed">
+              <CardContent className="p-6">
+                <div className="text-center">
+                  <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold mb-2">No documents uploaded yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Upload pitch decks, financials, and other documents to enable AI analysis
+                  </p>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      const tabsList = document.querySelector('[role="tablist"]')
+                      const documentsTab = tabsList?.querySelector('[value="documents"]') as HTMLElement
+                      documentsTab?.click()
+                    }}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Documents
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
@@ -459,7 +486,15 @@ export default function DealDetail({ deal }: DealDetailProps) {
         </TabsContent>
 
         {/* Documents Tab */}
-        <TabsContent value="documents">
+        <TabsContent value="documents" className="space-y-6">
+          {/* Upload Area - Always visible at top */}
+          <DealDocumentUpload
+            dealId={deal.id}
+            companyId={deal.company_id}
+            organizationId={deal.organization_id}
+            onUploadComplete={() => window.location.reload()}
+          />
+          
           <Card>
             <CardContent className="pt-6">
               {/* Search Bar */}

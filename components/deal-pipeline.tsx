@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Database } from '@/types/database'
-import { ChevronRight, Building2, User, DollarSign, Calendar, TrendingUp, Users, Globe } from 'lucide-react'
+import { ChevronRight, Building2, User, DollarSign, Calendar, TrendingUp, Users, Globe, FileText, Brain } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -12,10 +12,12 @@ type Deal = Database['public']['Tables']['deals']['Row'] & {
   company: Database['public']['Tables']['companies']['Row']
   analyst: Database['public']['Tables']['user_profiles']['Row'] | null
   partner: Database['public']['Tables']['user_profiles']['Row'] | null
+  documents?: { id: string; status: string }[]
+  deal_analyses?: { id: string; created_at: string }[]
 }
 
 interface DealPipelineProps {
-  deals: Deal[]
+  deals: any[] // Accept any deal shape for flexibility
 }
 
 const stages = [
@@ -189,7 +191,23 @@ export default function DealPipeline({ deals }: DealPipelineProps) {
                               </div>
                             </div>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
+                          <div className="flex items-center gap-2">
+                            {/* Document Count */}
+                            {deal.documents && deal.documents.length > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                <FileText className="w-3 h-3 mr-1" />
+                                {deal.documents.length}
+                              </Badge>
+                            )}
+                            {/* Analysis Status */}
+                            {deal.deal_analyses && deal.deal_analyses.length > 0 && (
+                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                <Brain className="w-3 h-3 mr-1" />
+                                Analyzed
+                              </Badge>
+                            )}
+                            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
+                          </div>
                         </div>
                         
                         {/* Deal Details */}

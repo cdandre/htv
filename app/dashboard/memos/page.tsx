@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { FileText, Search, Plus, Calendar, Building2, ChevronRight, Loader2 } from 'lucide-react'
+import { FileText, Search, Calendar, Building2, ChevronRight, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
@@ -129,12 +129,6 @@ export default function MemosPage() {
             <SelectItem value="final">Final</SelectItem>
           </SelectContent>
         </Select>
-        <Button asChild>
-          <Link href="/dashboard/deals">
-            <Plus className="mr-2 h-4 w-4" />
-            Generate New
-          </Link>
-        </Button>
       </div>
       
       {/* Memos Grid */}

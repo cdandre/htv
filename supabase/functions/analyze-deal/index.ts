@@ -59,7 +59,7 @@ serve(async (req) => {
       ?.map(chunk => chunk.content)
       .join('\n\n') || ''
 
-    // Create analysis with OpenAI API
+    // Create analysis with OpenAI API using Responses API
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -67,7 +67,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${openaiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4.1',
         messages: [{
           role: 'system',
           content: `You are an expert venture capital analyst evaluating potential investment opportunities. 
@@ -86,93 +86,53 @@ Location: ${deal.company.location || 'Unknown'}
 Documents provided:
 ${documentContent || 'No documents available'}
 
-Provide a comprehensive investment analysis with:
-1. Executive summary
-2. Scores (0-10) for team, market, product, and thesis fit
-3. Team assessment with strengths and concerns
-4. Market analysis including size and competitors
-5. Product evaluation
-6. Investment recommendation
-7. Key risks`
+Provide a comprehensive investment analysis as a JSON object with the following structure:
+{
+  "executive_summary": "High-level overview of the investment opportunity",
+  "scores": {
+    "team": <0-10>,
+    "market": <0-10>,
+    "product": <0-10>,
+    "thesis_fit": <0-10>
+  },
+  "team_assessment": {
+    "strengths": ["strength1", "strength2"],
+    "concerns": ["concern1", "concern2"],
+    "background_verification": "Background verification findings"
+  },
+  "market_analysis": {
+    "size": "Market size estimate",
+    "growth_rate": "Growth rate",
+    "trends": ["trend1", "trend2"],
+    "competitors": ["competitor1", "competitor2"]
+  },
+  "product_evaluation": {
+    "differentiation": "Key differentiators",
+    "technical_assessment": "Technical assessment",
+    "customer_validation": "Customer validation status"
+  },
+  "financial_projections": {
+    "revenue_model": "Revenue model description",
+    "burn_rate": "Monthly burn rate",
+    "runway": "Runway in months",
+    "key_metrics": ["metric1", "metric2"]
+  },
+  "investment_recommendation": {
+    "decision": "pass" | "explore" | "invest",
+    "rationale": "Detailed rationale for the decision",
+    "next_steps": ["step1", "step2"]
+  },
+  "risks": [
+    {
+      "category": "Risk category",
+      "description": "Risk description",
+      "mitigation": "Mitigation strategy"
+    }
+  ]
+}`
         }],
         response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'investment_analysis',
-            schema: {
-              type: 'object',
-              properties: {
-                executive_summary: {
-                  type: 'string',
-                  description: 'High-level overview of the investment opportunity'
-                },
-                scores: {
-                  type: 'object',
-                  properties: {
-                    team: { type: 'number', minimum: 0, maximum: 10 },
-                    market: { type: 'number', minimum: 0, maximum: 10 },
-                    product: { type: 'number', minimum: 0, maximum: 10 },
-                    thesis_fit: { type: 'number', minimum: 0, maximum: 10 }
-                  },
-                  required: ['team', 'market', 'product', 'thesis_fit']
-                },
-                team_assessment: {
-                  type: 'object',
-                  properties: {
-                    strengths: { type: 'array', items: { type: 'string' } },
-                    concerns: { type: 'array', items: { type: 'string' } },
-                    background_verification: { type: 'string' }
-                  }
-                },
-                market_analysis: {
-                  type: 'object',
-                  properties: {
-                    size: { type: 'string' },
-                    growth_rate: { type: 'string' },
-                    trends: { type: 'array', items: { type: 'string' } },
-                    competitors: { type: 'array', items: { type: 'string' } }
-                  }
-                },
-                product_evaluation: {
-                  type: 'object',
-                  properties: {
-                    differentiation: { type: 'string' },
-                    technical_assessment: { type: 'string' },
-                    customer_validation: { type: 'string' }
-                  }
-                },
-                financial_projections: {
-                  type: 'object',
-                  properties: {
-                    revenue_model: { type: 'string' },
-                    burn_rate: { type: 'string' },
-                    runway: { type: 'string' },
-                    key_metrics: { type: 'array', items: { type: 'string' } }
-                  }
-                },
-                investment_recommendation: {
-                  type: 'object',
-                  properties: {
-                    decision: { type: 'string', enum: ['pass', 'explore', 'invest'] },
-                    rationale: { type: 'string' },
-                    next_steps: { type: 'array', items: { type: 'string' } }
-                  }
-                },
-                risks: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      category: { type: 'string' },
-                      description: { type: 'string' },
-                      mitigation: { type: 'string' }
-                    }
-                  }
-                }
-              },
-              required: ['executive_summary', 'scores', 'team_assessment', 'market_analysis', 'product_evaluation', 'investment_recommendation']
-            }
-          }
+          type: 'json_object'
         },
         temperature: 0.7,
         max_tokens: 4000

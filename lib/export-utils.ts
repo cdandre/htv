@@ -20,7 +20,9 @@ interface MemoData {
   created_at: string
   content: MemoContent
   deal?: {
-    company_name: string
+    company?: {
+      name: string
+    }
     stage: string
     sector: string
   }
@@ -42,7 +44,7 @@ export async function exportMemoToWord(memo: MemoData): Promise<Blob> {
   if (memo.deal) {
     sections.push(
       new Paragraph({
-        text: memo.deal.company_name,
+        text: memo.deal.company?.name || 'Unknown Company',
         heading: HeadingLevel.HEADING_1,
         alignment: AlignmentType.CENTER,
         spacing: { after: 200 }

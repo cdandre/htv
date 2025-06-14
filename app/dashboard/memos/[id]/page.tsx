@@ -30,9 +30,13 @@ interface InvestmentMemo {
   generated_by: string
   deal?: {
     id: string
-    company_name: string
+    title: string
     stage: string
     sector: string
+    company: {
+      id: string
+      name: string
+    }
   }
 }
 

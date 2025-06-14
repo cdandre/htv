@@ -1,7 +1,5 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.47.10'
-import OpenAI from 'npm:openai@4.56.0'
-import { toFile } from 'npm:openai@4.56.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,12 +45,7 @@ serve(async (req) => {
       throw new Error('Deal not found')
     }
 
-    // Initialize OpenAI client
-    const openai = new OpenAI({
-      apiKey: openaiKey,
-    })
-    
-    // Upload documents to OpenAI
+    // Upload documents to OpenAI using direct API calls
     console.log('Number of documents:', deal.documents.length)
     const uploadedFiles = []
     
@@ -69,17 +62,63 @@ serve(async (req) => {
             continue
           }
           
-          // Convert blob to Uint8Array
+          // Create multipart form data for file upload
+          const boundary = '----FormBoundary' + Math.random().toString(36)
           const arrayBuffer = await fileData.arrayBuffer()
           const uint8Array = new Uint8Array(arrayBuffer)
           
-          // Upload to OpenAI using the Files API
+          // Build multipart body
+          const parts = [
+            `------${boundary}`,
+            `Content-Disposition: form-data; name="purpose"`,
+            '',
+            'assistants',
+            `------${boundary}`,
+            `Content-Disposition: form-data; name="file"; filename="${doc.title}"`,
+            `Content-Type: ${doc.mime_type}`,
+            '',
+          ]
+          
+          // Combine parts with file data
+          const textParts = parts.join('\r\n') + '\r\n'
+          const endPart = `\r\n------${boundary}--\r\n`
+          
+          const textEncoder = new TextEncoder()
+          const body = new Uint8Array(
+            textEncoder.encode(textParts).length + 
+            uint8Array.length + 
+            textEncoder.encode(endPart).length
+          )
+          
+          let offset = 0
+          const textPartBytes = textEncoder.encode(textParts)
+          body.set(textPartBytes, offset)
+          offset += textPartBytes.length
+          
+          body.set(uint8Array, offset)
+          offset += uint8Array.length
+          
+          const endPartBytes = textEncoder.encode(endPart)
+          body.set(endPartBytes, offset)
+          
+          // Upload to OpenAI
           console.log(`Uploading ${doc.title} to OpenAI...`)
-          const file = await openai.files.create({
-            file: await toFile(uint8Array, doc.title),
-            purpose: 'user_data' // For use with Responses API
+          const uploadResponse = await fetch('https://api.openai.com/v1/files', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiKey}`,
+              'Content-Type': `multipart/form-data; boundary=----${boundary}`
+            },
+            body: body
           })
           
+          if (!uploadResponse.ok) {
+            const error = await uploadResponse.text()
+            console.error(`Failed to upload ${doc.title}:`, error)
+            continue
+          }
+          
+          const file = await uploadResponse.json()
           uploadedFiles.push({
             fileId: file.id,
             filename: doc.title,
@@ -168,17 +207,34 @@ Provide a comprehensive investment analysis as a JSON object with the following 
   ]
 }`
 
-    // Use OpenAI SDK to create the response
+    // Use direct API call for Responses API
     try {
       console.log('Creating analysis with OpenAI Responses API...')
-      const response = await openai.responses.create({
+      
+      const requestBody = {
         model: 'gpt-4.1',
         input: [{
           role: 'user',
           content: inputContent
         }]
+      }
+      
+      const apiResponse = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiKey}`,
+        },
+        body: JSON.stringify(requestBody)
       })
       
+      if (!apiResponse.ok) {
+        const error = await apiResponse.text()
+        console.error('OpenAI API error:', error)
+        throw new Error('Failed to create analysis')
+      }
+      
+      const response = await apiResponse.json()
       console.log('OpenAI response received')
     
       // Extract the structured analysis from the Responses API output

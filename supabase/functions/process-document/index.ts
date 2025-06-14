@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.47.10'
-import * as pdfjsLib from 'https://esm.sh/pdfjs-dist@4.0.379/+esm'
+import { extractText, getDocumentProxy } from 'npm:unpdf@0.11.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,11 +14,17 @@ serve(async (req) => {
 
   try {
     const { documentId } = await req.json()
+    console.log('Processing document with ID:', documentId)
     
     // Initialize clients
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const openaiKey = Deno.env.get('OPENAI_API_KEY')!
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const openaiKey = Deno.env.get('OPENAI_API_KEY')
+    
+    if (!supabaseUrl || !supabaseKey || !openaiKey) {
+      console.error('Missing environment variables')
+      throw new Error('Server configuration error')
+    }
     
     const supabase = createClient(supabaseUrl, supabaseKey)
 
@@ -53,36 +59,21 @@ serve(async (req) => {
     
     if (document.mime_type === 'application/pdf') {
       try {
-        // Convert file data to Uint8Array for PDF.js
+        // Convert file data to Uint8Array for unpdf
         const arrayBuffer = await fileData.arrayBuffer()
-        const data = new Uint8Array(arrayBuffer)
+        const pdfData = new Uint8Array(arrayBuffer)
         
-        // Configure PDF.js worker
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js'
+        console.log(`Processing PDF: ${document.title} (${document.file_size} bytes)`)
         
-        // Load the PDF document
-        const loadingTask = pdfjsLib.getDocument({ data })
-        const pdf = await loadingTask.promise
+        // Extract text using unpdf
+        const pdf = await getDocumentProxy(pdfData)
+        const { totalPages, text } = await extractText(pdf, { mergePages: true })
         
-        console.log(`Processing PDF with ${pdf.numPages} pages`)
+        console.log(`Successfully extracted text from ${totalPages} pages`)
         
-        // Extract text from all pages
-        const textPages = []
-        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-          const page = await pdf.getPage(pageNum)
-          const textContent = await page.getTextContent()
-          const pageText = textContent.items
-            .map((item: any) => item.str)
-            .join(' ')
-          
-          if (pageText.trim()) {
-            textPages.push(`[Page ${pageNum}]\n${pageText}`)
-          }
-        }
-        
-        extractedText = textPages.join('\n\n')
-        
-        if (!extractedText.trim()) {
+        if (text && text.trim()) {
+          extractedText = text
+        } else {
           extractedText = `PDF Document: ${document.title}
 Warning: No text content could be extracted from this PDF.
 The PDF might contain only images or be scanned without OCR.`

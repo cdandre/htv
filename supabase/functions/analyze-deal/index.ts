@@ -151,8 +151,10 @@ Provide a comprehensive investment analysis as a JSON object with the following 
     let analysisData
     try {
       analysisData = JSON.parse(response.choices[0].message.content)
+      console.log('Parsed analysis data:', JSON.stringify(analysisData, null, 2))
     } catch (e) {
       console.error('Failed to parse analysis response:', e)
+      console.error('Raw response:', response.choices[0].message.content)
       throw new Error('Invalid analysis format received')
     }
 
@@ -165,14 +167,17 @@ Provide a comprehensive investment analysis as a JSON object with the following 
       .from('deal_analyses')
       .insert({
         deal_id: dealId,
+        analysis_type: 'comprehensive',
+        status: 'completed',
         result: analysisData,
-        generated_by: user.id,
+        requested_by: user.id,
       })
       .select()
       .single()
 
     if (analysisError) {
-      throw new Error('Failed to store analysis')
+      console.error('Database error storing analysis:', analysisError)
+      throw new Error(`Failed to store analysis: ${analysisError.message}`)
     }
 
     // Update deal scores

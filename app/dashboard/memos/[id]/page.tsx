@@ -13,6 +13,7 @@ import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { createClient } from '@/lib/supabase/client'
 import { exportMemoToWord, downloadBlob } from '@/lib/export-utils'
+import { marked } from 'marked'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,6 +49,34 @@ interface InvestmentMemo {
       name: string
     }
   }
+}
+
+// Configure marked for better formatting
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+})
+
+// Format memo content to handle markdown
+function formatMemoContent(text: string): string {
+  if (!text) return ''
+  
+  // Convert markdown to HTML
+  let html = marked(text) as string
+  
+  // Add some custom styling for better appearance
+  html = html
+    .replace(/<h1>/g, '<h1 class="text-2xl font-bold mt-6 mb-4">')
+    .replace(/<h2>/g, '<h2 class="text-xl font-semibold mt-4 mb-3">')
+    .replace(/<h3>/g, '<h3 class="text-lg font-medium mt-3 mb-2">')
+    .replace(/<ul>/g, '<ul class="list-disc pl-6 my-3">')
+    .replace(/<ol>/g, '<ol class="list-decimal pl-6 my-3">')
+    .replace(/<li>/g, '<li class="mb-1">')
+    .replace(/<p>/g, '<p class="mb-3">')
+    .replace(/<strong>/g, '<strong class="font-semibold">')
+    .replace(/<em>/g, '<em class="italic">')
+  
+  return html
 }
 
 export default function MemoDetailPage({ params }: { params: { id: string } }) {
@@ -379,7 +408,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Executive Summary</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.executive_summary}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.executive_summary) }}
+                  />
                 </div>
               </section>
             )}
@@ -391,7 +423,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Company Overview</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.company_overview}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.company_overview) }}
+                  />
                 </div>
               </section>
             )}
@@ -401,7 +436,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Team Assessment</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.team_assessment}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.team_assessment) }}
+                  />
                 </div>
               </section>
             )}
@@ -411,7 +449,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Problem & Solution</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.problem_solution}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.problem_solution) }}
+                  />
                 </div>
               </section>
             )}
@@ -421,7 +462,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Market Opportunity</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.market_opportunity}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.market_opportunity) }}
+                  />
                 </div>
               </section>
             )}
@@ -431,7 +475,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Product & Technology</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.product_technology}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.product_technology) }}
+                  />
                 </div>
               </section>
             )}
@@ -441,7 +488,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Business Model</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.business_model}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.business_model) }}
+                  />
                 </div>
               </section>
             )}
@@ -451,7 +501,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Traction & Metrics</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.traction_metrics}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.traction_metrics) }}
+                  />
                 </div>
               </section>
             )}
@@ -461,7 +514,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Competitive Analysis</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.competitive_analysis}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.competitive_analysis) }}
+                  />
                 </div>
               </section>
             )}
@@ -471,7 +527,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Financial Analysis</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.financial_analysis}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.financial_analysis) }}
+                  />
                 </div>
               </section>
             )}
@@ -481,7 +540,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Investment Thesis</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.investment_thesis}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.investment_thesis) }}
+                  />
                 </div>
               </section>
             )}
@@ -491,7 +553,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Use of Funds</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.use_of_funds}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.use_of_funds) }}
+                  />
                 </div>
               </section>
             )}
@@ -501,7 +566,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Risks & Mitigation</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.risks_mitigation}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.risks_mitigation) }}
+                  />
                 </div>
               </section>
             )}
@@ -511,7 +579,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Exit Strategy</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.exit_strategy}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.exit_strategy) }}
+                  />
                 </div>
               </section>
             )}
@@ -522,7 +593,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
                 <h2 className="text-xl font-semibold mb-4">Recommendation</h2>
                 <Card className="bg-muted/50">
                   <CardContent className="p-6">
-                    <div className="whitespace-pre-wrap">{content.recommendation}</div>
+                    <div 
+                      className="whitespace-pre-wrap"
+                      dangerouslySetInnerHTML={{ __html: formatMemoContent(content.recommendation) }}
+                    />
                   </CardContent>
                 </Card>
               </section>
@@ -533,7 +607,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Proposed Terms</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.proposed_terms}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.proposed_terms) }}
+                  />
                 </div>
               </section>
             )}
@@ -543,7 +620,10 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
               <section>
                 <h2 className="text-xl font-semibold mb-4">Next Steps</h2>
                 <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap">{content.next_steps}</div>
+                  <div 
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: formatMemoContent(content.next_steps) }}
+                  />
                 </div>
               </section>
             )}

@@ -15,17 +15,22 @@ import { format } from 'date-fns'
 interface InvestmentMemo {
   id: string
   deal_id: string
+  title: string
   content: any
-  status: 'draft' | 'final'
+  status: 'draft' | 'final' | 'completed'
   version: number
   created_at: string
   updated_at: string
   generated_by: string
   deal?: {
     id: string
-    company_name: string
+    title: string
     stage: string
-    sector: string
+    company: {
+      id: string
+      name: string
+      sector_id: string | null
+    }
   }
 }
 
@@ -49,9 +54,13 @@ export default function MemosPage() {
           *,
           deal:deals(
             id,
-            company_name,
+            title,
             stage,
-            sector
+            company:companies(
+              id,
+              name,
+              sector_id
+            )
           )
         `)
         .order('created_at', { ascending: false })
@@ -72,8 +81,9 @@ export default function MemosPage() {
   
   const filteredMemos = memos.filter(memo => {
     const matchesSearch = searchQuery === '' || 
-      memo.deal?.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      memo.deal?.sector?.toLowerCase().includes(searchQuery.toLowerCase())
+      memo.deal?.company?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      memo.deal?.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      memo.title.toLowerCase().includes(searchQuery.toLowerCase())
     
     const matchesStatus = statusFilter === 'all' || memo.status === statusFilter
     
@@ -159,15 +169,15 @@ export default function MemosPage() {
                     </div>
                     <div>
                       <CardTitle className="text-lg">
-                        {memo.deal?.company_name || 'Unknown Company'}
+                        {memo.deal?.company?.name || memo.title || 'Unknown Company'}
                       </CardTitle>
                       <CardDescription>
-                        {memo.deal?.sector || 'Unknown Sector'}
+                        {memo.deal?.title || 'Investment Memo'}
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge variant={memo.status === 'final' ? 'default' : 'secondary'}>
-                    {memo.status === 'final' ? 'Final' : 'Draft'}
+                  <Badge variant={memo.status === 'completed' ? 'default' : memo.status === 'final' ? 'default' : 'secondary'}>
+                    {memo.status === 'completed' ? 'Completed' : memo.status === 'final' ? 'Final' : 'Draft'}
                   </Badge>
                 </div>
               </CardHeader>

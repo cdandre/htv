@@ -848,9 +848,6 @@ export default function DealDetail({ deal }: DealDetailProps) {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={doc.status === 'completed' ? 'success' : doc.status === 'processing' ? 'warning' : 'destructive'}>
-                          {doc.status}
-                        </Badge>
                         <Button variant="ghost" size="sm">
                           <Download className="h-4 w-4" />
                         </Button>

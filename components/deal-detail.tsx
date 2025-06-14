@@ -21,7 +21,8 @@ import {
   Clock,
   ChevronRight,
   Upload,
-  Search
+  Search,
+  Edit3
 } from 'lucide-react'
 import { format } from 'date-fns'
 import ReactMarkdown from 'react-markdown'
@@ -45,13 +46,13 @@ interface DealDetailProps {
 }
 
 const stageConfig = {
-  thesis_fit: { name: 'Thesis Fit', color: 'bg-slate-100 text-slate-700' },
-  signals: { name: 'Signals', color: 'bg-blue-100 text-blue-700' },
-  validation: { name: 'Validation', color: 'bg-yellow-100 text-yellow-700' },
-  conviction: { name: 'Conviction', color: 'bg-green-100 text-green-700' },
-  term_sheet: { name: 'Term Sheet', color: 'bg-purple-100 text-purple-700' },
-  due_diligence: { name: 'Due Diligence', color: 'bg-indigo-100 text-indigo-700' },
-  closed: { name: 'Closed', color: 'bg-pink-100 text-pink-700' },
+  thesis_fit: { name: 'Thesis Fit', color: 'bg-gray-100 text-gray-700 border-gray-300' },
+  signals: { name: 'Signals', color: 'bg-gray-200 text-gray-800 border-gray-400' },
+  validation: { name: 'Validation', color: 'bg-gray-300 text-gray-900 border-gray-500' },
+  conviction: { name: 'Conviction', color: 'bg-gray-400 text-gray-900 border-gray-600' },
+  term_sheet: { name: 'Term Sheet', color: 'bg-gray-700 text-white border-gray-800' },
+  due_diligence: { name: 'Due Diligence', color: 'bg-gray-800 text-white border-gray-900' },
+  closed: { name: 'Closed', color: 'bg-black text-white border-black' },
 }
 
 export default function DealDetail({ deal }: DealDetailProps) {
@@ -120,9 +121,9 @@ export default function DealDetail({ deal }: DealDetailProps) {
 
   const getScoreColor = (score: number | null) => {
     if (!score) return 'text-gray-400'
-    if (score >= 8) return 'text-green-600'
-    if (score >= 6) return 'text-yellow-600'
-    return 'text-red-600'
+    if (score >= 8) return 'text-gray-900 dark:text-white'
+    if (score >= 6) return 'text-gray-700 dark:text-gray-300'
+    return 'text-gray-500 dark:text-gray-500'
   }
 
   const avgScore = () => {
@@ -144,7 +145,10 @@ export default function DealDetail({ deal }: DealDetailProps) {
                 <h1 className="text-3xl font-bold tracking-tight">{deal.company.name}</h1>
                 <p className="text-lg text-muted-foreground mt-1">{deal.title}</p>
                 <div className="flex flex-wrap items-center gap-3 mt-3">
-                  <Badge className={stageConfig[deal.stage].color}>
+                  <Badge 
+                    variant="outline"
+                    className={`border-2 ${stageConfig[deal.stage].color}`}
+                  >
                     {stageConfig[deal.stage].name}
                   </Badge>
                   {deal.company.location && (
@@ -158,6 +162,14 @@ export default function DealDetail({ deal }: DealDetailProps) {
             </div>
             
             <div className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.location.href = `/dashboard/deals/${deal.id}/edit`}
+              >
+                <Edit3 className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
               <Button variant="outline" size="sm">
                 <Calendar className="mr-2 h-4 w-4" />
                 Schedule Meeting

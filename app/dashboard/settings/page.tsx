@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { User, Building2, Key, Bell, Shield, Database, Palette, Loader2 } from 'lucide-react'
+import { User, Building2, Key, Bell, Shield, Database, Palette, Loader2, Monitor, Moon, Sun } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { createClient } from '@/lib/supabase/client'
 import { NotificationPreferences } from '@/components/notification-preferences'
 import { IntegrationsSettings } from '@/components/integrations-settings'
+import { OrganizationSettings } from '@/components/organization-settings'
+import { useTheme } from 'next-themes'
 
 interface UserProfile {
   id: string
@@ -23,26 +25,19 @@ interface UserProfile {
   organization_id: string
 }
 
-interface Organization {
-  id: string
-  name: string
-  website?: string
-}
 
 export default function SettingsPage() {
   const { toast } = useToast()
+  const { theme, setTheme } = useTheme()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [organization, setOrganization] = useState<Organization | null>(null)
   
   // Form states
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [bio, setBio] = useState('')
-  const [orgName, setOrgName] = useState('')
-  const [orgWebsite, setOrgWebsite] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -70,21 +65,6 @@ export default function SettingsPage() {
           setFullName(profileData.full_name || '')
           setPhone(profileData.phone || '')
           setBio(profileData.bio || '')
-          
-          // Load organization if user is admin
-          if (profileData.role === 'admin' && profileData.organization_id) {
-            const { data: orgData } = await supabase
-              .from('organizations')
-              .select('*')
-              .eq('id', profileData.organization_id)
-              .single()
-            
-            if (orgData) {
-              setOrganization(orgData)
-              setOrgName(orgData.name || '')
-              setOrgWebsite(orgData.website || '')
-            }
-          }
         }
       }
     } catch (error) {
@@ -115,34 +95,6 @@ export default function SettingsPage() {
       toast({
         title: 'Error',
         description: 'Failed to update profile',
-        variant: 'destructive'
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
-  
-  const handleSaveOrganization = async () => {
-    try {
-      setSaving(true)
-      const response = await fetch('/api/settings/organization', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: orgName, website: orgWebsite })
-      })
-      
-      if (response.ok) {
-        toast({
-          title: 'Organization updated',
-          description: 'Organization settings have been updated successfully'
-        })
-      } else {
-        throw new Error('Failed to update organization')
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update organization',
         variant: 'destructive'
       })
     } finally {
@@ -229,15 +181,6 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
-                  <User className="w-10 h-10 text-primary" />
-                </div>
-                <div>
-                  <Button variant="outline" size="sm">Change Avatar</Button>
-                  <p className="text-xs text-muted-foreground mt-1">JPG, PNG or GIF. Max 2MB.</p>
-                </div>
-              </div>
               
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
@@ -306,85 +249,7 @@ export default function SettingsPage() {
 
         {/* Organization Settings */}
         <TabsContent value="organization">
-          <Card>
-            <CardHeader>
-              <CardTitle>Organization Settings</CardTitle>
-              <CardDescription>
-                Manage your organization details and team members
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="orgName">Organization Name</Label>
-                  <Input 
-                    id="orgName" 
-                    value={orgName}
-                    onChange={(e) => setOrgName(e.target.value)}
-                    disabled={profile?.role !== 'admin'}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="orgWebsite">Website</Label>
-                  <Input 
-                    id="orgWebsite" 
-                    type="url" 
-                    value={orgWebsite}
-                    onChange={(e) => setOrgWebsite(e.target.value)}
-                    disabled={profile?.role !== 'admin'}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-medium mb-4">Team Members</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-lg border">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">John Doe</p>
-                        <p className="text-sm text-muted-foreground">john@htv.vc • Partner</p>
-                      </div>
-                    </div>
-                    <Badge>Admin</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg border">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Jane Smith</p>
-                        <p className="text-sm text-muted-foreground">jane@htv.vc • Analyst</p>
-                      </div>
-                    </div>
-                    <Badge variant="secondary">Member</Badge>
-                  </div>
-                </div>
-                <div className="flex gap-2 mt-4">
-                  <Button variant="outline" disabled={profile?.role !== 'admin'}>
-                    <User className="mr-2 h-4 w-4" />
-                    Invite Team Member
-                  </Button>
-                  {profile?.role === 'admin' && (
-                    <Button onClick={handleSaveOrganization} disabled={saving}>
-                      {saving ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        'Save Changes'
-                      )}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {profile && <OrganizationSettings userProfile={profile} />}
         </TabsContent>
 
         {/* Security Settings */}
@@ -443,7 +308,15 @@ export default function SettingsPage() {
                 <p className="text-sm text-muted-foreground">
                   Add an extra layer of security to your account
                 </p>
-                <Button variant="outline">
+                <Button 
+                  variant="outline"
+                  onClick={async () => {
+                    toast({
+                      title: '2FA Coming Soon',
+                      description: 'Two-factor authentication will be available in a future update.',
+                    })
+                  }}
+                >
                   <Shield className="mr-2 h-4 w-4" />
                   Enable 2FA
                 </Button>
@@ -475,36 +348,47 @@ export default function SettingsPage() {
               <div>
                 <h3 className="text-lg font-medium mb-4">Theme</h3>
                 <div className="grid grid-cols-3 gap-4">
-                  <Card className="cursor-pointer hover:border-primary">
+                  <Card 
+                    className={`cursor-pointer transition-all ${theme === 'light' ? 'border-primary ring-2 ring-primary/20' : 'hover:border-primary'}`}
+                    onClick={() => setTheme('light')}
+                  >
                     <CardContent className="p-4">
-                      <div className="w-full h-20 bg-white rounded-md border mb-2" />
+                      <div className="w-full h-20 bg-white rounded-md border mb-2 flex items-center justify-center">
+                        <Sun className="h-8 w-8 text-gray-400" />
+                      </div>
                       <p className="text-sm font-medium text-center">Light</p>
                     </CardContent>
                   </Card>
-                  <Card className="cursor-pointer hover:border-primary">
+                  <Card 
+                    className={`cursor-pointer transition-all ${theme === 'dark' ? 'border-primary ring-2 ring-primary/20' : 'hover:border-primary'}`}
+                    onClick={() => setTheme('dark')}
+                  >
                     <CardContent className="p-4">
-                      <div className="w-full h-20 bg-gray-900 rounded-md border mb-2" />
+                      <div className="w-full h-20 bg-gray-900 rounded-md border mb-2 flex items-center justify-center">
+                        <Moon className="h-8 w-8 text-gray-600" />
+                      </div>
                       <p className="text-sm font-medium text-center">Dark</p>
                     </CardContent>
                   </Card>
-                  <Card className="cursor-pointer hover:border-primary">
+                  <Card 
+                    className={`cursor-pointer transition-all ${theme === 'system' ? 'border-primary ring-2 ring-primary/20' : 'hover:border-primary'}`}
+                    onClick={() => setTheme('system')}
+                  >
                     <CardContent className="p-4">
-                      <div className="w-full h-20 bg-gradient-to-br from-gray-100 to-gray-900 rounded-md border mb-2" />
+                      <div className="w-full h-20 bg-gradient-to-br from-gray-100 to-gray-900 rounded-md border mb-2 flex items-center justify-center">
+                        <Monitor className="h-8 w-8 text-gray-500" />
+                      </div>
                       <p className="text-sm font-medium text-center">System</p>
                     </CardContent>
                   </Card>
                 </div>
               </div>
               
-              <div>
-                <h3 className="text-lg font-medium mb-4">Accent Color</h3>
-                <div className="flex gap-3">
-                  <button className="w-10 h-10 bg-blue-500 rounded-full hover:ring-2 hover:ring-offset-2 hover:ring-blue-500" />
-                  <button className="w-10 h-10 bg-purple-500 rounded-full hover:ring-2 hover:ring-offset-2 hover:ring-purple-500" />
-                  <button className="w-10 h-10 bg-green-500 rounded-full hover:ring-2 hover:ring-offset-2 hover:ring-green-500" />
-                  <button className="w-10 h-10 bg-orange-500 rounded-full hover:ring-2 hover:ring-offset-2 hover:ring-orange-500" />
-                  <button className="w-10 h-10 bg-pink-500 rounded-full hover:ring-2 hover:ring-offset-2 hover:ring-pink-500" />
-                </div>
+              <div className="pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  The HTV Operating System follows a minimal black and white design philosophy. 
+                  Color accents are used sparingly for status indicators and important actions.
+                </p>
               </div>
             </CardContent>
           </Card>

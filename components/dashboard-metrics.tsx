@@ -29,28 +29,24 @@ export default function DashboardMetrics({ deals }: DashboardMetricsProps) {
       value: activeDeals.length,
       icon: Briefcase,
       description: 'In pipeline',
-      trend: { value: 12, isPositive: true },
     },
     {
       title: 'Portfolio Value',
       value: `$${(totalPortfolioValue / 1000000).toFixed(1)}M`,
       icon: DollarSign,
       description: 'Total invested',
-      trend: { value: 8, isPositive: true },
     },
     {
       title: 'Avg Deal Size',
-      value: `$${(avgDealSize / 1000000).toFixed(1)}M`,
+      value: avgDealSize > 0 ? `$${(avgDealSize / 1000000).toFixed(1)}M` : '$0M',
       icon: Target,
       description: 'Average check size',
-      trend: { value: 5, isPositive: false },
     },
     {
       title: 'Closed Deals',
       value: closedDeals.length,
       icon: CheckCircle,
-      description: 'This quarter',
-      trend: { value: 25, isPositive: true },
+      description: 'Successfully closed',
     },
   ]
 
@@ -77,22 +73,10 @@ export default function DashboardMetrics({ deals }: DashboardMetricsProps) {
               </div>
             </div>
             
-            <div className="flex items-center justify-between mt-4">
+            <div className="mt-4">
               <span className="body-small text-gray-600 dark:text-gray-400">
                 {metric.description}
               </span>
-              {metric.trend && (
-                <div className={`inline-flex items-center gap-1 text-sm font-medium ${
-                  metric.trend.isPositive ? 'status-success' : 'status-error'
-                }`}>
-                  {metric.trend.isPositive ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  <span>{metric.trend.value}%</span>
-                </div>
-              )}
             </div>
           </div>
         )

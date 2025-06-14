@@ -19,13 +19,13 @@ interface DealPipelineProps {
 }
 
 const stages = [
-  { id: 'thesis_fit', name: 'Thesis Fit', color: 'bg-slate-500', lightColor: 'bg-slate-100', textColor: 'text-slate-700' },
-  { id: 'signals', name: 'Signals', color: 'bg-blue-500', lightColor: 'bg-blue-100', textColor: 'text-blue-700' },
-  { id: 'validation', name: 'Validation', color: 'bg-yellow-500', lightColor: 'bg-yellow-100', textColor: 'text-yellow-700' },
-  { id: 'conviction', name: 'Conviction', color: 'bg-green-500', lightColor: 'bg-green-100', textColor: 'text-green-700' },
-  { id: 'term_sheet', name: 'Term Sheet', color: 'bg-purple-500', lightColor: 'bg-purple-100', textColor: 'text-purple-700' },
-  { id: 'due_diligence', name: 'Due Diligence', color: 'bg-indigo-500', lightColor: 'bg-indigo-100', textColor: 'text-indigo-700' },
-  { id: 'closed', name: 'Closed', color: 'bg-pink-500', lightColor: 'bg-pink-100', textColor: 'text-pink-700' },
+  { id: 'thesis_fit', name: 'Thesis Fit', color: 'bg-gray-200', borderColor: 'border-gray-300', textColor: 'text-gray-600' },
+  { id: 'signals', name: 'Signals', color: 'bg-gray-300', borderColor: 'border-gray-400', textColor: 'text-gray-700' },
+  { id: 'validation', name: 'Validation', color: 'bg-gray-400', borderColor: 'border-gray-500', textColor: 'text-gray-800' },
+  { id: 'conviction', name: 'Conviction', color: 'bg-gray-500', borderColor: 'border-gray-600', textColor: 'text-gray-900' },
+  { id: 'term_sheet', name: 'Term Sheet', color: 'bg-gray-600', borderColor: 'border-gray-700', textColor: 'text-white' },
+  { id: 'due_diligence', name: 'Due Diligence', color: 'bg-gray-700', borderColor: 'border-gray-800', textColor: 'text-white' },
+  { id: 'closed', name: 'Closed', color: 'bg-black', borderColor: 'border-black', textColor: 'text-white' },
 ] as const
 
 export default function DealPipeline({ deals }: DealPipelineProps) {
@@ -57,9 +57,9 @@ export default function DealPipeline({ deals }: DealPipelineProps) {
 
   const getScoreColor = (score: number | null) => {
     if (!score) return 'bg-gray-200'
-    if (score >= 8) return 'bg-green-500'
-    if (score >= 6) return 'bg-yellow-500'
-    return 'bg-red-500'
+    if (score >= 8) return 'bg-gray-900 dark:bg-gray-100'
+    if (score >= 6) return 'bg-gray-600 dark:bg-gray-400'
+    return 'bg-gray-400 dark:bg-gray-600'
   }
 
   return (
@@ -76,24 +76,24 @@ export default function DealPipeline({ deals }: DealPipelineProps) {
             <button
               key={stage.id}
               onClick={() => setSelectedStage(stage.id === selectedStage ? null : stage.id)}
-              className={`relative p-3 sm:p-4 rounded-xl transition-all duration-200 transform hover:scale-105 animate-in ${
+              className={`relative p-3 sm:p-4 rounded-sm border-2 transition-all duration-200 ${
                 selectedStage === stage.id
-                  ? 'ring-2 ring-primary shadow-lg scale-105'
-                  : 'hover:shadow-md'
+                  ? `${stage.color} ${stage.borderColor} ${stage.textColor}`
+                  : 'bg-white dark:bg-black border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600'
               }`}
-              style={{ 
-                animationDelay: `${index * 50}ms`,
-                background: selectedStage === stage.id 
-                  ? `linear-gradient(135deg, ${stage.lightColor} 0%, white 100%)`
-                  : 'white'
-              }}
+              style={{ animationDelay: `${index * 50}ms` }}
             >
-              <div className={`absolute inset-0 rounded-xl opacity-10 ${stage.color}`} />
               <div className="relative">
-                <div className="text-xl sm:text-2xl font-bold mb-1">{stageDeals.length}</div>
-                <div className={`text-xs sm:text-sm font-medium ${stage.textColor}`}>{stage.name}</div>
+                <div className={`text-xl sm:text-2xl font-bold mb-1 ${
+                  selectedStage === stage.id ? '' : 'text-black dark:text-white'
+                }`}>{stageDeals.length}</div>
+                <div className={`text-xs sm:text-sm font-medium ${
+                  selectedStage === stage.id ? '' : 'text-gray-600 dark:text-gray-400'
+                }`}>{stage.name}</div>
                 {totalValue > 0 && (
-                  <div className="text-xs text-muted-foreground mt-1 sm:mt-2 hidden sm:block">
+                  <div className={`text-xs mt-1 sm:mt-2 hidden sm:block ${
+                    selectedStage === stage.id ? 'opacity-80' : 'text-gray-500 dark:text-gray-500'
+                  }`}>
                     ${(totalValue / 1000000).toFixed(1)}M
                   </div>
                 )}
@@ -176,8 +176,12 @@ export default function DealPipeline({ deals }: DealPipelineProps) {
                                 )}
                                 {stage && (
                                   <Badge 
-                                    variant="secondary" 
-                                    className={`text-xs ${stage.lightColor} ${stage.textColor} border-0`}
+                                    variant="outline" 
+                                    className={`text-xs border ${stage.borderColor} ${stage.textColor} ${
+                                      ['term_sheet', 'due_diligence', 'closed'].includes(stage.id) 
+                                        ? 'bg-gray-900 dark:bg-gray-100' 
+                                        : 'bg-transparent'
+                                    }`}
                                   >
                                     {stage.name}
                                   </Badge>

@@ -397,8 +397,8 @@ Example citations from documents:
           }
         }
         
-        // Wait a shorter time for vector store to process files
-        await new Promise(resolve => setTimeout(resolve, 500))
+        // No need to wait - files should already be processed
+        // await new Promise(resolve => setTimeout(resolve, 500))
         
         // Build document context string
         if (uploadedFiles.length > 0) {
@@ -587,7 +587,7 @@ WARNING: Many companies have similar names. ALWAYS verify you're researching ${d
 TOOL USAGE ENFORCEMENT:
 - ${vectorStoreId ? '🔴 CRITICAL: You MUST use file_search tool AT LEAST 10 times throughout the memo' : 'Base analysis on the document insights provided'}
 - ${vectorStoreId ? '🔴 For EVERY section, use file_search FIRST to find relevant quotes from documents' : ''}
-- If you do not use web_search_preview at least 15 times, the memo will be automatically rejected
+- Use web_search_preview at least 10 times for market research and verification
 - ${vectorStoreId ? 'Pattern: file_search → quote findings → web_search → cite sources' : 'Start each major section by performing relevant web searches'}
 - Use specific search queries with company name and domain
 - The system will handle citation formatting automatically
@@ -604,7 +604,7 @@ FILE_SEARCH EXAMPLES YOU MUST FOLLOW:
 
 YOU MUST USE file_search BEFORE WRITING EACH SECTION!` : ''}
 
-Write a comprehensive investment memo (5-8 pages, approximately 3,500-5,000 words) following this EXACT markdown structure. Use ## for main sections and ### for subsections. Be thorough and detailed, quoting extensively from the uploaded documents:
+Write a comprehensive investment memo (4-6 pages, approximately 2,500-3,500 words) following this EXACT markdown structure. Use ## for main sections and ### for subsections. Quote from uploaded documents and cite web sources:
 
 # Investment Memo: ${deal.company.name}
 
@@ -860,7 +860,7 @@ REMEMBER:
         tools: tools,
         tool_choice: vectorStoreId ? 'auto' : { type: 'web_search_preview' },  // Let AI choose tools if documents exist
         store: true,  // Store for conversation continuity
-        max_output_tokens: 16000,  // Increased for 5-8 page memo
+        max_output_tokens: 12000,  // Balanced for quality and speed
         include: ["file_search_call.results"]  // Include search results for debugging
       }),
     })

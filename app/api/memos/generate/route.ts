@@ -21,9 +21,9 @@ export async function POST(request: NextRequest) {
     // Call the Supabase edge function with extended timeout
     console.log('Calling generate-memo edge function for deal:', dealId)
     
-    // Create an AbortController with a 9-minute timeout (540 seconds)
+    // Create an AbortController with a 6-minute timeout (Supabase limit is ~6.67 minutes)
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 540000)
+    const timeoutId = setTimeout(() => controller.abort(), 360000)
     
     try {
       const { data, error } = await supabase.functions.invoke('generate-memo', {

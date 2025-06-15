@@ -87,9 +87,9 @@ export default function DealDetail({ deal }: DealDetailProps) {
   const handleGenerateMemo = async () => {
     setGeneratingMemo(true)
     try {
-      // Create an AbortController with a 9-minute timeout
+      // Create an AbortController with a 6-minute timeout (Supabase limit is ~6.67 minutes)
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 540000) // 9 minutes
+      const timeoutId = setTimeout(() => controller.abort(), 360000) // 6 minutes
       
       const response = await fetch('/api/memos/generate', {
         method: 'POST',
@@ -512,7 +512,7 @@ export default function DealDetail({ deal }: DealDetailProps) {
                 {generatingMemo ? (
                   <>
                     <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                    Generating (5-8 min)...
+                    Generating (3-5 min)...
                   </>
                 ) : (
                   <>

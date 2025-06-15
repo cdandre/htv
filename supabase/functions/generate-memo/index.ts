@@ -103,21 +103,25 @@ serve(async (req) => {
     }
 
     // Generate memo using OpenAI Responses API
-    const memoPrompt = `You are a senior venture capital partner at HTV writing a comprehensive investment memo for the investment committee. Your memo should be thorough, data-driven, and balanced.
+    const memoPrompt = `STOP! Before writing ANYTHING, you must first perform web searches.
+
+You are a senior venture capital partner at HTV. Your task is to research ${deal.company.name} and write an investment memo.
+
+STEP 1 - PERFORM WEB SEARCHES FIRST (REQUIRED):
+Before writing any content, perform these web searches:
+1. Search: "${deal.company.name} ${companyDomain} company overview"
+2. Search: "${deal.company.name} ${companyDomain} funding history"
+3. Search: "${deal.company.name} ${companyDomain} team founders"
+4. Search: "${deal.company.name} competitors market size"
+5. Search: "${deal.stage} venture capital investments 2024 2025"
+
+After completing these initial searches, continue with more searches as you write each section.
 
 CRITICAL WEB SEARCH REQUIREMENTS:
-- You MUST use the web_search_preview tool at least 15 times throughout the memo
-- Search for specific, detailed information about the company, market, competitors, and trends
-- When you find information from web search, incorporate it naturally into your writing
+- You MUST perform at least 15 web searches total
+- Start by searching, THEN write based on what you find
 - The system will automatically add citations to your text
-- Every section should include multiple facts from web searches
-
-HOW TO USE WEB SEARCH EFFECTIVELY:
-1. Start each section by searching for relevant information
-2. Search for specific data points, statistics, and recent news
-3. Search for competitor information and market analysis
-4. Search for team backgrounds and company history
-5. Use the exact search queries suggested below
+- Every paragraph should include facts from your web searches
 
 CRITICAL INSTRUCTIONS:
 1. The AI ANALYSIS provided above is based on uploaded documents - use it as your PRIMARY source
@@ -410,9 +414,10 @@ REMEMBER:
         model: 'gpt-4.1',
         input: memoPrompt,
         tools: [{
-          type: 'web_search_preview'
+          type: 'web_search_preview',
+          search_context_size: 'medium'  // Balance quality and cost
         }],
-        tool_choice: 'auto',
+        tool_choice: { type: 'web_search_preview' },  // Force web search usage
         store: true,  // Store for conversation continuity
         max_output_tokens: 8000  // Increase output limit to prevent truncation
       }),

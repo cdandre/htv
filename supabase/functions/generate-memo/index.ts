@@ -117,16 +117,114 @@ serve(async (req) => {
     console.log('Analysis contains domain info:', analysisText.includes('.ai') ? 'Yes (.ai domain found)' : analysisText.includes('.com') ? 'Yes (.com domain found)' : 'No domain found')
     console.log('===========================')
 
-    // Get document contents if available
+    // Upload documents to OpenAI for analysis
+    console.log('Number of documents to upload:', deal.documents?.length || 0)
+    const uploadedFiles = []
     let documentContext = ''
+    
     if (deal.documents && deal.documents.length > 0) {
-      documentContext = `\n\nUPLOADED DOCUMENTS:\n`
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      const supabaseService = createClient(supabaseUrl, supabaseServiceKey)
+      
       for (const doc of deal.documents) {
-        documentContext += `- ${doc.title} (${doc.mime_type})\n`
-        // If we had document content stored, we would include it here
-        // For now, we note that documents exist
+        try {
+          // Download file from Supabase storage
+          const { data: fileData, error: downloadError } = await supabaseService.storage
+            .from('documents')
+            .download(doc.file_path)
+          
+          if (downloadError) {
+            console.error(`Failed to download ${doc.title}:`, downloadError)
+            continue
+          }
+          
+          // Create multipart form data for file upload
+          const boundary = '----FormBoundary' + Math.random().toString(36)
+          const arrayBuffer = await fileData.arrayBuffer()
+          const uint8Array = new Uint8Array(arrayBuffer)
+          
+          // Build multipart body
+          const parts = [
+            `------${boundary}`,
+            `Content-Disposition: form-data; name="purpose"`,
+            '',
+            'assistants',
+            `------${boundary}`,
+            `Content-Disposition: form-data; name="file"; filename="${doc.title}"`,
+            `Content-Type: ${doc.mime_type}`,
+            '',
+          ]
+          
+          // Combine parts with file data
+          const textParts = parts.join('\r\n') + '\r\n'
+          const endPart = `\r\n------${boundary}--\r\n`
+          
+          const textEncoder = new TextEncoder()
+          const body = new Uint8Array(
+            textEncoder.encode(textParts).length + 
+            uint8Array.length + 
+            textEncoder.encode(endPart).length
+          )
+          
+          let offset = 0
+          const textPartBytes = textEncoder.encode(textParts)
+          body.set(textPartBytes, offset)
+          offset += textPartBytes.length
+          
+          body.set(uint8Array, offset)
+          offset += uint8Array.length
+          
+          const endPartBytes = textEncoder.encode(endPart)
+          body.set(endPartBytes, offset)
+          
+          // Upload to OpenAI
+          console.log(`Uploading ${doc.title} to OpenAI...`)
+          const uploadResponse = await fetch('https://api.openai.com/v1/files', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiKey}`,
+              'Content-Type': `multipart/form-data; boundary=----${boundary}`
+            },
+            body: body
+          })
+          
+          if (!uploadResponse.ok) {
+            const error = await uploadResponse.text()
+            console.error(`Failed to upload ${doc.title}:`, error)
+            continue
+          }
+          
+          const file = await uploadResponse.json()
+          uploadedFiles.push({
+            fileId: file.id,
+            filename: doc.title,
+            type: doc.mime_type
+          })
+          
+          console.log(`Successfully uploaded ${doc.title} with ID: ${file.id}`)
+        } catch (error) {
+          console.error(`Error uploading ${doc.title}:`, error)
+        }
       }
-      documentContext += `\nIMPORTANT: The above documents contain critical information about the company. Base your analysis primarily on these documents, then supplement with web research.\n`
+      
+      // Build document context string
+      if (uploadedFiles.length > 0) {
+        documentContext = `\n\nUPLOADED DOCUMENTS (${uploadedFiles.length} files):\n`
+        for (const file of uploadedFiles) {
+          documentContext += `- ${file.filename} (File ID: ${file.fileId})\n`
+        }
+        documentContext += `\nCRITICAL: These documents have been uploaded to OpenAI and are available for your analysis. You have direct access to read these files using their File IDs above. You MUST:
+1. Read each uploaded document thoroughly
+2. Quote specific facts, figures, and insights from them
+3. Reference specific slide numbers, page numbers, or sections
+4. Use exact data points, not generalizations
+5. Start each section by reviewing relevant parts of the documents
+
+Example citations from documents:
+- "According to slide 8 of the pitch deck, the company has achieved $2.5M ARR"
+- "The team slide (page 5) shows the CEO has 10 years of real estate experience"
+- "Financial projections in the appendix forecast 300% growth by 2025"\n`
+      }
     }
 
     // Generate memo using OpenAI Responses API
@@ -170,18 +268,22 @@ ${JSON.stringify(latestAnalysis.result, null, 2)}
 
 ${documentContext}
 
-STEP 1 - DEEP DIVE INTO UPLOADED DOCUMENTS:
-The document analysis above contains key insights from the pitch deck. Search through it for:
-- Company's value proposition for housing/home industry
-- Evidence of solving real problems for homeowners, builders, or real estate professionals
-- Team backgrounds - look for housing/construction/real estate experience
-- Customer traction - any homebuilders, brokers, property managers as customers?
-- Business model - B2B selling to housing industry or B2B2C through housing partners?
-- Market size claims - how big is their segment of the housing market?
-- Technology differentiation - what's unique about their approach?
-- Financial metrics - revenue, burn rate, runway from the deck
+STEP 1 - ANALYZE THE UPLOADED DOCUMENTS (YOUR PRIMARY SOURCE):
+${uploadedFiles.length > 0 ? `I have uploaded ${uploadedFiles.length} document(s) directly to this conversation. READ THEM NOW and extract:` : 'The AI analysis above contains document insights. Extract:'}
+- Company's exact value proposition from their pitch deck
+- Specific slides about market size, TAM, and growth projections
+- Team slide - founders' names, backgrounds, prior experience
+- Traction slides - customer logos, revenue numbers, growth metrics
+- Product demos or screenshots showing the actual solution
+- Financial projections - burn rate, runway, revenue forecasts
+- Competition slide - how they position against competitors
+- Use of funds - what they plan to do with the investment
 
-IMPORTANT: Quote specific facts and figures from the document analysis when writing the memo.
+CRITICAL: You MUST quote directly from the uploaded documents throughout the memo. Use phrases like:
+- "According to slide 5 of the pitch deck..."
+- "The financial projections on page 12 show..."
+- "As stated in their executive summary..."
+- "The team slide reveals that the CEO..."
 
 STEP 2 - PERFORM WEB SEARCHES TO VERIFY AND SUPPLEMENT:
 Now perform web searches to supplement the document insights:
@@ -262,15 +364,18 @@ WEB SEARCH ENFORCEMENT:
 - Use specific search queries with company name and domain
 - The system will handle citation formatting automatically
 
-Write a focused investment memo (1,500-2,000 words) following this EXACT markdown structure. Use ## for main sections and ### for subsections:
+Write a comprehensive investment memo (5-8 pages, approximately 3,500-5,000 words) following this EXACT markdown structure. Use ## for main sections and ### for subsections. Be thorough and detailed, quoting extensively from the uploaded documents:
 
 # Investment Memo: ${deal.company.name}
 
 ## Executive Summary
-- Company overview and HTV thesis fit
-- Investment recommendation (invest/pass)
-- Key highlights (3 bullet points)
-- Proposed terms: Check size and valuation
+Write 3-4 paragraphs covering:
+- Company overview with specific details from pitch deck
+- How it fits (or doesn't fit) HTV's housing/home tech thesis
+- Investment recommendation with clear rationale
+- Key investment highlights (5-6 bullet points with data)
+- Proposed terms: Check size, valuation, and ownership
+- Expected returns and exit timeline
 
 ## Company Overview
 Provide a detailed description including:
@@ -498,7 +603,7 @@ REMEMBER:
         }],
         tool_choice: { type: 'web_search_preview' },  // Force web search usage
         store: true,  // Store for conversation continuity
-        max_output_tokens: 4096  // Standard limit for better reliability
+        max_output_tokens: 16000  // Increased for 5-8 page memo
       }),
     })
 

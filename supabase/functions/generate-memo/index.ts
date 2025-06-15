@@ -117,113 +117,166 @@ serve(async (req) => {
     console.log('Analysis contains domain info:', analysisText.includes('.ai') ? 'Yes (.ai domain found)' : analysisText.includes('.com') ? 'Yes (.com domain found)' : 'No domain found')
     console.log('===========================')
 
-    // Upload documents to OpenAI for analysis
+    // Create vector store and upload documents for file search
     console.log('Number of documents to upload:', deal.documents?.length || 0)
-    const uploadedFiles = []
+    let vectorStoreId = null
     let documentContext = ''
+    const uploadedFiles = []
     
     if (deal.documents && deal.documents.length > 0) {
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       const supabaseService = createClient(supabaseUrl, supabaseServiceKey)
       
-      for (const doc of deal.documents) {
-        try {
-          // Download file from Supabase storage
-          const { data: fileData, error: downloadError } = await supabaseService.storage
-            .from('documents')
-            .download(doc.file_path)
-          
-          if (downloadError) {
-            console.error(`Failed to download ${doc.title}:`, downloadError)
-            continue
-          }
-          
-          // Create multipart form data for file upload
-          const boundary = '----FormBoundary' + Math.random().toString(36)
-          const arrayBuffer = await fileData.arrayBuffer()
-          const uint8Array = new Uint8Array(arrayBuffer)
-          
-          // Build multipart body
-          const parts = [
-            `------${boundary}`,
-            `Content-Disposition: form-data; name="purpose"`,
-            '',
-            'assistants',
-            `------${boundary}`,
-            `Content-Disposition: form-data; name="file"; filename="${doc.title}"`,
-            `Content-Type: ${doc.mime_type}`,
-            '',
-          ]
-          
-          // Combine parts with file data
-          const textParts = parts.join('\r\n') + '\r\n'
-          const endPart = `\r\n------${boundary}--\r\n`
-          
-          const textEncoder = new TextEncoder()
-          const body = new Uint8Array(
-            textEncoder.encode(textParts).length + 
-            uint8Array.length + 
-            textEncoder.encode(endPart).length
-          )
-          
-          let offset = 0
-          const textPartBytes = textEncoder.encode(textParts)
-          body.set(textPartBytes, offset)
-          offset += textPartBytes.length
-          
-          body.set(uint8Array, offset)
-          offset += uint8Array.length
-          
-          const endPartBytes = textEncoder.encode(endPart)
-          body.set(endPartBytes, offset)
-          
-          // Upload to OpenAI
-          console.log(`Uploading ${doc.title} to OpenAI...`)
-          const uploadResponse = await fetch('https://api.openai.com/v1/files', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${openaiKey}`,
-              'Content-Type': `multipart/form-data; boundary=----${boundary}`
-            },
-            body: body
+      try {
+        // Create a vector store for this deal's documents
+        console.log('Creating vector store for deal documents...')
+        const vectorStoreResponse = await fetch('https://api.openai.com/v1/vector_stores', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: `Deal ${dealId} - ${deal.company.name} Documents`
           })
-          
-          if (!uploadResponse.ok) {
-            const error = await uploadResponse.text()
-            console.error(`Failed to upload ${doc.title}:`, error)
-            continue
+        })
+        
+        if (!vectorStoreResponse.ok) {
+          const error = await vectorStoreResponse.text()
+          throw new Error(`Failed to create vector store: ${error}`)
+        }
+        
+        const vectorStore = await vectorStoreResponse.json()
+        vectorStoreId = vectorStore.id
+        console.log('Created vector store:', vectorStoreId)
+        
+        // Upload each document
+        for (const doc of deal.documents) {
+          try {
+            // Download file from Supabase storage
+            const { data: fileData, error: downloadError } = await supabaseService.storage
+              .from('documents')
+              .download(doc.file_path)
+            
+            if (downloadError) {
+              console.error(`Failed to download ${doc.title}:`, downloadError)
+              continue
+            }
+            
+            // Create multipart form data for file upload
+            const boundary = '----FormBoundary' + Math.random().toString(36)
+            const arrayBuffer = await fileData.arrayBuffer()
+            const uint8Array = new Uint8Array(arrayBuffer)
+            
+            // Build multipart body
+            const parts = [
+              `------${boundary}`,
+              `Content-Disposition: form-data; name="purpose"`,
+              '',
+              'assistants',
+              `------${boundary}`,
+              `Content-Disposition: form-data; name="file"; filename="${doc.title}"`,
+              `Content-Type: ${doc.mime_type}`,
+              '',
+            ]
+            
+            // Combine parts with file data
+            const textParts = parts.join('\r\n') + '\r\n'
+            const endPart = `\r\n------${boundary}--\r\n`
+            
+            const textEncoder = new TextEncoder()
+            const body = new Uint8Array(
+              textEncoder.encode(textParts).length + 
+              uint8Array.length + 
+              textEncoder.encode(endPart).length
+            )
+            
+            let offset = 0
+            const textPartBytes = textEncoder.encode(textParts)
+            body.set(textPartBytes, offset)
+            offset += textPartBytes.length
+            
+            body.set(uint8Array, offset)
+            offset += uint8Array.length
+            
+            const endPartBytes = textEncoder.encode(endPart)
+            body.set(endPartBytes, offset)
+            
+            // Upload to OpenAI
+            console.log(`Uploading ${doc.title} to OpenAI...`)
+            const uploadResponse = await fetch('https://api.openai.com/v1/files', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${openaiKey}`,
+                'Content-Type': `multipart/form-data; boundary=----${boundary}`
+              },
+              body: body
+            })
+            
+            if (!uploadResponse.ok) {
+              const error = await uploadResponse.text()
+              console.error(`Failed to upload ${doc.title}:`, error)
+              continue
+            }
+            
+            const file = await uploadResponse.json()
+            uploadedFiles.push({
+              fileId: file.id,
+              filename: doc.title,
+              type: doc.mime_type
+            })
+            
+            console.log(`Successfully uploaded ${doc.title} with ID: ${file.id}`)
+            
+            // Add file to vector store
+            console.log(`Adding ${doc.title} to vector store...`)
+            const addFileResponse = await fetch(`https://api.openai.com/v1/vector_stores/${vectorStoreId}/files`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${openaiKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                file_id: file.id
+              })
+            })
+            
+            if (!addFileResponse.ok) {
+              const error = await addFileResponse.text()
+              console.error(`Failed to add file to vector store: ${error}`)
+            } else {
+              console.log(`Added ${doc.title} to vector store`)
+            }
+            
+          } catch (error) {
+            console.error(`Error processing ${doc.title}:`, error)
           }
-          
-          const file = await uploadResponse.json()
-          uploadedFiles.push({
-            fileId: file.id,
-            filename: doc.title,
-            type: doc.mime_type
-          })
-          
-          console.log(`Successfully uploaded ${doc.title} with ID: ${file.id}`)
-        } catch (error) {
-          console.error(`Error uploading ${doc.title}:`, error)
         }
-      }
-      
-      // Build document context string
-      if (uploadedFiles.length > 0) {
-        documentContext = `\n\nUPLOADED DOCUMENTS (${uploadedFiles.length} files):\n`
-        for (const file of uploadedFiles) {
-          documentContext += `- ${file.filename} (File ID: ${file.fileId})\n`
-        }
-        documentContext += `\nCRITICAL: These documents have been uploaded to OpenAI and are available for your analysis. You have direct access to read these files using their File IDs above. You MUST:
-1. Read each uploaded document thoroughly
-2. Quote specific facts, figures, and insights from them
+        
+        // Wait a moment for vector store to process files
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        
+        // Build document context string
+        if (uploadedFiles.length > 0) {
+          documentContext = `\n\nUPLOADED DOCUMENTS (${uploadedFiles.length} files in vector store):\n`
+          for (const file of uploadedFiles) {
+            documentContext += `- ${file.filename}\n`
+          }
+          documentContext += `\nCRITICAL: These documents have been uploaded to a vector store. You will use the file_search tool to analyze them. You MUST:
+1. Search the documents for specific information about the company
+2. Quote exact text from the documents with proper attribution
 3. Reference specific slide numbers, page numbers, or sections
-4. Use exact data points, not generalizations
-5. Start each section by reviewing relevant parts of the documents
+4. Use the file_search tool multiple times to find different information
+5. Start each section by searching for relevant content in the documents
 
 Example citations from documents:
-- "According to slide 8 of the pitch deck, the company has achieved $2.5M ARR"
-- "The team slide (page 5) shows the CEO has 10 years of real estate experience"
-- "Financial projections in the appendix forecast 300% growth by 2025"\n`
+- "According to the pitch deck, the company has achieved $2.5M ARR..."
+- "The team slide shows the CEO has 10 years of real estate experience..."
+- "Financial projections in the appendix forecast 300% growth by 2025..."\n`
+        }
+        
+      } catch (error) {
+        console.error('Error creating vector store:', error)
       }
     }
 
@@ -269,7 +322,7 @@ ${JSON.stringify(latestAnalysis.result, null, 2)}
 ${documentContext}
 
 STEP 1 - ANALYZE THE UPLOADED DOCUMENTS (YOUR PRIMARY SOURCE):
-${uploadedFiles.length > 0 ? `I have uploaded ${uploadedFiles.length} document(s) directly to this conversation. READ THEM NOW and extract:` : 'The AI analysis above contains document insights. Extract:'}
+${vectorStoreId ? `I have uploaded ${uploadedFiles.length} document(s) to a vector store (ID: ${vectorStoreId}). USE THE FILE_SEARCH TOOL to search and extract:` : 'The AI analysis above contains document insights. Extract:'}
 - Company's exact value proposition from their pitch deck
 - Specific slides about market size, TAM, and growth projections
 - Team slide - founders' names, backgrounds, prior experience
@@ -303,11 +356,11 @@ CRITICAL WEB SEARCH REQUIREMENTS:
 - Verify you're researching the RIGHT company (${deal.company.name} at ${companyDomain})
 
 CRITICAL INSTRUCTIONS:
-1. The AI ANALYSIS provided above is based on uploaded documents - use it as your PRIMARY source
+1. ${vectorStoreId ? 'USE THE FILE_SEARCH TOOL to search the uploaded documents - this is your PRIMARY source' : 'The AI ANALYSIS provided above is based on uploaded documents - use it as your PRIMARY source'}
 2. Extract key insights from the analysis (team assessment, market analysis, product evaluation, etc.)
 3. ACTIVELY USE web_search to find 15-20 additional sources for market data, competitors, and news
 4. EVERY fact from web search MUST have an inline citation in markdown format
-5. Clearly distinguish between insights from the document analysis and web research
+5. ${vectorStoreId ? 'Use file_search for document quotes and web_search for market research' : 'Clearly distinguish between insights from the document analysis and web research'}
 
 COMPANY TO ANALYZE: ${deal.company.name}
 Deal Title: ${deal.title}
@@ -358,9 +411,10 @@ REQUIRED WEB SEARCHES - YOU MUST PERFORM ALL OF THESE:
 
 WARNING: Many companies have similar names. ALWAYS verify you're researching ${deal.company.name} with domain ${companyDomain}, not a different company!
 
-WEB SEARCH ENFORCEMENT:
+TOOL USAGE ENFORCEMENT:
+- ${vectorStoreId ? 'USE FILE_SEARCH FIRST: Search uploaded documents for specific quotes and data' : 'Base analysis on the document insights provided'}
 - If you do not use web_search_preview at least 15 times, the memo will be automatically rejected
-- Start each major section by performing relevant web searches
+- ${vectorStoreId ? 'Start each section with file_search for document quotes, then web searches' : 'Start each major section by performing relevant web searches'}
 - Use specific search queries with company name and domain
 - The system will handle citation formatting automatically
 
@@ -600,8 +654,11 @@ REMEMBER:
         tools: [{
           type: 'web_search_preview',
           search_context_size: 'medium'  // Balance quality and cost
-        }],
-        tool_choice: { type: 'web_search_preview' },  // Force web search usage
+        }, vectorStoreId ? {
+          type: 'file_search',
+          vector_store_ids: [vectorStoreId]
+        } : null].filter(Boolean),
+        tool_choice: vectorStoreId ? undefined : { type: 'web_search_preview' },  // Force web search if no documents
         store: true,  // Store for conversation continuity
         max_output_tokens: 16000  // Increased for 5-8 page memo
       }),

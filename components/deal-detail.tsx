@@ -87,55 +87,35 @@ export default function DealDetail({ deal }: DealDetailProps) {
   const handleGenerateMemo = async () => {
     setGeneratingMemo(true)
     try {
-      // Create an AbortController with a 6-minute timeout (Supabase limit is ~6.67 minutes)
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 360000) // 6 minutes
-      
       const response = await fetch('/api/memos/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId: deal.id }),
-        signal: controller.signal
+        body: JSON.stringify({ dealId: deal.id })
       })
-      
-      clearTimeout(timeoutId)
       
       const data = await response.json()
       
       if (response.ok && data.memoId) {
         toast({
-          title: 'Success',
-          description: 'Investment memo generated successfully. Redirecting...',
+          title: 'Memo Generation Started',
+          description: 'Your investment memo is being generated. Redirecting to progress view...',
         })
-        // Redirect to the generated memo
+        // Redirect to the memo progress view immediately
         setTimeout(() => {
           window.location.href = `/dashboard/memos/${data.memoId}`
         }, 1000)
-      } else if (response.status === 504) {
-        toast({
-          title: 'Timeout',
-          description: 'Memo generation is taking longer than expected. This can happen with large documents. Please try again in a few minutes.',
-          variant: 'destructive',
-        })
       } else {
         toast({
           title: 'Error',
-          description: data.error || 'Failed to generate memo',
+          description: data.error || 'Failed to start memo generation',
           variant: 'destructive',
         })
       }
     } catch (error: any) {
-      console.error('Error generating memo:', error)
-      if (error.name === 'AbortError') {
-        toast({
-          title: 'Timeout',
-          description: 'The request took too long. Please try again.',
-          variant: 'destructive',
-        })
-      } else {
-        toast({
-          title: 'Error',
-          description: 'Failed to generate memo',
+      console.error('Error starting memo generation:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to start memo generation',
           variant: 'destructive',
         })
       }
@@ -512,7 +492,7 @@ export default function DealDetail({ deal }: DealDetailProps) {
                 {generatingMemo ? (
                   <>
                     <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                    Generating (3-5 min)...
+                    Starting Generation...
                   </>
                 ) : (
                   <>

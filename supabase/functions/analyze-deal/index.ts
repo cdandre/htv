@@ -48,8 +48,33 @@ serve(async (req) => {
     // Upload documents to OpenAI using direct API calls
     console.log('Number of documents:', deal.documents.length)
     const uploadedFiles = []
+    let vectorStoreId = null
     
     if (deal.documents.length > 0) {
+      // Create a vector store for this deal's documents
+      try {
+        console.log('Creating vector store for deal documents...')
+        const vectorStoreResponse = await fetch('https://api.openai.com/v1/vector_stores', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: `Deal ${dealId} - ${deal.company.name} Analysis`
+          })
+        })
+        
+        if (vectorStoreResponse.ok) {
+          const vectorStore = await vectorStoreResponse.json()
+          vectorStoreId = vectorStore.id
+          console.log('Created vector store:', vectorStoreId)
+        } else {
+          console.error('Failed to create vector store:', await vectorStoreResponse.text())
+        }
+      } catch (error) {
+        console.error('Error creating vector store:', error)
+      }
       for (const doc of deal.documents) {
         try {
           // Download file from Supabase storage
@@ -126,6 +151,45 @@ serve(async (req) => {
           })
           
           console.log(`Successfully uploaded ${doc.title} with ID: ${file.id}`)
+          
+          // Store the OpenAI file ID in the database
+          const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+          const supabaseService = createClient(supabaseUrl, supabaseServiceKey)
+          
+          const { error: updateError } = await supabaseService
+            .from('documents')
+            .update({ openai_file_id: file.id })
+            .eq('id', doc.id)
+          
+          if (updateError) {
+            console.error(`Failed to store OpenAI file ID for ${doc.title}:`, updateError)
+          } else {
+            console.log(`Stored OpenAI file ID for ${doc.title}`)
+          }
+          
+          // Add file to vector store if we have one
+          if (vectorStoreId) {
+            try {
+              const addFileResponse = await fetch(`https://api.openai.com/v1/vector_stores/${vectorStoreId}/files`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${openaiKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  file_id: file.id
+                })
+              })
+              
+              if (addFileResponse.ok) {
+                console.log(`Added ${doc.title} to vector store`)
+              } else {
+                console.error(`Failed to add file to vector store:`, await addFileResponse.text())
+              }
+            } catch (error) {
+              console.error(`Error adding file to vector store:`, error)
+            }
+          }
         } catch (error) {
           console.error(`Error uploading ${doc.title}:`, error)
         }
@@ -288,6 +352,7 @@ Provide a comprehensive investment analysis as a JSON object with the following 
         status: 'completed',
         result: analysisData,
         requested_by: user.id,
+        openai_vector_store_id: vectorStoreId
       })
       .select()
       .single()

@@ -11,6 +11,10 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  // Set a timeout for the entire function (25 minutes - Supabase limit is 30)
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 25 * 60 * 1000)
+
   try {
     const { dealId } = await req.json()
     const authHeader = req.headers.get('Authorization')!
@@ -119,17 +123,121 @@ serve(async (req) => {
 
     // Create vector store and upload documents for file search
     console.log('Number of documents to upload:', deal.documents?.length || 0)
+    const startTime = Date.now()
     let vectorStoreId = null
     let documentContext = ''
     const uploadedFiles = []
     
-    if (deal.documents && deal.documents.length > 0) {
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      const supabaseService = createClient(supabaseUrl, supabaseServiceKey)
+    // Check if we already have a vector store from the analysis
+    if (latestAnalysis.openai_vector_store_id) {
+      vectorStoreId = latestAnalysis.openai_vector_store_id
+      console.log('Using existing vector store from analysis:', vectorStoreId)
       
-      try {
-        // Create a vector store for this deal's documents
-        console.log('Creating vector store for deal documents...')
+      // Build document context based on existing documents
+      if (deal.documents && deal.documents.length > 0) {
+        documentContext = `\n\nUPLOADED DOCUMENTS (${deal.documents.length} files in vector store):\n`
+        for (const doc of deal.documents) {
+          documentContext += `- ${doc.title}\n`
+          uploadedFiles.push({
+            filename: doc.title,
+            type: doc.mime_type
+          })
+        }
+        documentContext += `\nCRITICAL: These documents have been uploaded to a vector store. You will use the file_search tool to analyze them. You MUST:
+1. Search the documents for specific information about the company
+2. Quote exact text from the documents with proper attribution
+3. Reference specific slide numbers, page numbers, or sections
+4. Use the file_search tool multiple times to find different information
+5. Start each section by searching for relevant content in the documents
+
+Example citations from documents:
+- "According to the pitch deck, the company has achieved $2.5M ARR..."
+- "The team slide shows the CEO has 10 years of real estate experience..."
+- "Financial projections in the appendix forecast 300% growth by 2025..."\n`
+      }
+    } else if (deal.documents && deal.documents.length > 0) {
+      // Check if documents already have OpenAI file IDs
+      const docsWithFileIds = deal.documents.filter((doc: any) => doc.openai_file_id)
+      
+      if (docsWithFileIds.length === deal.documents.length) {
+        // All documents already uploaded, just create a new vector store
+        console.log('All documents already have OpenAI file IDs, creating new vector store...')
+        
+        try {
+          const vectorStoreResponse = await fetch('https://api.openai.com/v1/vector_stores', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              name: `Deal ${dealId} - ${deal.company.name} Memo Generation`
+            })
+          })
+          
+          if (vectorStoreResponse.ok) {
+            const vectorStore = await vectorStoreResponse.json()
+            vectorStoreId = vectorStore.id
+            console.log('Created vector store:', vectorStoreId)
+            
+            // Add existing files to vector store
+            for (const doc of docsWithFileIds) {
+              try {
+                const addFileResponse = await fetch(`https://api.openai.com/v1/vector_stores/${vectorStoreId}/files`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${openaiKey}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    file_id: doc.openai_file_id
+                  })
+                })
+                
+                if (addFileResponse.ok) {
+                  console.log(`Added existing file ${doc.title} to vector store`)
+                  uploadedFiles.push({
+                    filename: doc.title,
+                    type: doc.mime_type
+                  })
+                } else {
+                  console.error(`Failed to add existing file to vector store:`, await addFileResponse.text())
+                }
+              } catch (error) {
+                console.error(`Error adding existing file to vector store:`, error)
+              }
+            }
+            
+            // Build document context
+            if (uploadedFiles.length > 0) {
+              documentContext = `\n\nUPLOADED DOCUMENTS (${uploadedFiles.length} files in vector store):\n`
+              for (const file of uploadedFiles) {
+                documentContext += `- ${file.filename}\n`
+              }
+              documentContext += `\nCRITICAL: These documents have been uploaded to a vector store. You will use the file_search tool to analyze them. You MUST:
+1. Search the documents for specific information about the company
+2. Quote exact text from the documents with proper attribution
+3. Reference specific slide numbers, page numbers, or sections
+4. Use the file_search tool multiple times to find different information
+5. Start each section by searching for relevant content in the documents
+
+Example citations from documents:
+- "According to the pitch deck, the company has achieved $2.5M ARR..."
+- "The team slide shows the CEO has 10 years of real estate experience..."
+- "Financial projections in the appendix forecast 300% growth by 2025..."\n`
+            }
+          }
+        } catch (error) {
+          console.error('Error creating vector store:', error)
+        }
+      } else {
+        // Need to upload some or all documents
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        const supabaseService = createClient(supabaseUrl, supabaseServiceKey)
+        
+        try {
+          // Create a vector store for this deal's documents
+          console.log('Creating vector store for deal documents...')
         const vectorStoreResponse = await fetch('https://api.openai.com/v1/vector_stores', {
           method: 'POST',
           headers: {
@@ -153,6 +261,34 @@ serve(async (req) => {
         // Upload each document
         for (const doc of deal.documents) {
           try {
+            // Skip if document already has OpenAI file ID
+            if (doc.openai_file_id) {
+              console.log(`${doc.title} already has OpenAI file ID: ${doc.openai_file_id}`)
+              uploadedFiles.push({
+                fileId: doc.openai_file_id,
+                filename: doc.title,
+                type: doc.mime_type
+              })
+              
+              // Add to vector store
+              const addFileResponse = await fetch(`https://api.openai.com/v1/vector_stores/${vectorStoreId}/files`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${openaiKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  file_id: doc.openai_file_id
+                })
+              })
+              
+              if (addFileResponse.ok) {
+                console.log(`Added existing file ${doc.title} to vector store`)
+              } else {
+                console.error(`Failed to add existing file to vector store:`, await addFileResponse.text())
+              }
+              continue
+            }
             // Download file from Supabase storage
             const { data: fileData, error: downloadError } = await supabaseService.storage
               .from('documents')
@@ -228,6 +364,18 @@ serve(async (req) => {
             
             console.log(`Successfully uploaded ${doc.title} with ID: ${file.id}`)
             
+            // Store the OpenAI file ID in the database
+            const { error: updateError } = await supabaseService
+              .from('documents')
+              .update({ openai_file_id: file.id })
+              .eq('id', doc.id)
+            
+            if (updateError) {
+              console.error(`Failed to store OpenAI file ID for ${doc.title}:`, updateError)
+            } else {
+              console.log(`Stored OpenAI file ID for ${doc.title}`)
+            }
+            
             // Add file to vector store
             console.log(`Adding ${doc.title} to vector store...`)
             const addFileResponse = await fetch(`https://api.openai.com/v1/vector_stores/${vectorStoreId}/files`, {
@@ -253,8 +401,8 @@ serve(async (req) => {
           }
         }
         
-        // Wait a moment for vector store to process files
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        // Wait a shorter time for vector store to process files
+        await new Promise(resolve => setTimeout(resolve, 500))
         
         // Build document context string
         if (uploadedFiles.length > 0) {
@@ -277,6 +425,9 @@ Example citations from documents:
         
       } catch (error) {
         console.error('Error creating vector store:', error)
+      }
+      
+      console.log(`Document upload completed in ${Date.now() - startTime}ms`)
       }
     }
 
@@ -642,12 +793,16 @@ REMEMBER:
 - Assess thesis fit by researching HTV's portfolio and investment focus
 - Make a clear recommendation based on both document insights and market research`
 
+    console.log('Starting OpenAI Responses API call...')
+    const apiStartTime = Date.now()
+    
     const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${openaiKey}`,
       },
+      signal: controller.signal,
       body: JSON.stringify({
         model: 'gpt-4.1',
         input: memoPrompt,
@@ -664,9 +819,10 @@ REMEMBER:
       }),
     })
 
-    console.log('OpenAI Responses API called with web_search tool')
+    console.log('OpenAI Responses API called with tools:', vectorStoreId ? 'web_search + file_search' : 'web_search only')
     console.log('Request model:', 'gpt-4.1')
-    console.log('Max output tokens:', 8000)
+    console.log('Max output tokens:', 16000)
+    console.log(`API call completed in ${Date.now() - apiStartTime}ms`)
 
     if (!openaiResponse.ok) {
       const error = await openaiResponse.json()
@@ -963,7 +1119,23 @@ REMEMBER:
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error: any) {
+    clearTimeout(timeoutId)
     console.error('Error generating memo:', error)
+    
+    // Check if it's an abort error (timeout)
+    if (error.name === 'AbortError') {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Request timeout', 
+          message: 'Memo generation took too long. This can happen with large documents. Please try again.' 
+        }),
+        { 
+          status: 504,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+    
     return new Response(
       JSON.stringify({ error: error.message || 'Failed to generate memo' }),
       { 
@@ -971,6 +1143,8 @@ REMEMBER:
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
+  } finally {
+    clearTimeout(timeoutId)
   }
 })
 

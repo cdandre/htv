@@ -30,13 +30,14 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    // Get deal with all related data
+    // Get deal with all related data including documents
     const { data: deal, error: dealError } = await supabase
       .from('deals')
       .select(`
         *,
         company:companies(*),
-        deal_analyses(*)
+        deal_analyses(*),
+        documents(*)
       `)
       .eq('id', dealId)
       .single()
@@ -53,21 +54,38 @@ serve(async (req) => {
       throw new Error('No analysis found for this deal')
     }
 
+    // Get document contents if available
+    let documentContext = ''
+    if (deal.documents && deal.documents.length > 0) {
+      documentContext = `\n\nUPLOADED DOCUMENTS:\n`
+      for (const doc of deal.documents) {
+        documentContext += `- ${doc.title} (${doc.mime_type})\n`
+        // If we had document content stored, we would include it here
+        // For now, we note that documents exist
+      }
+      documentContext += `\nIMPORTANT: The above documents contain critical information about the company. Base your analysis primarily on these documents, then supplement with web research.\n`
+    }
+
     // Generate memo using OpenAI Responses API
     const memoPrompt = `You are a senior venture capital partner at HTV writing a comprehensive investment memo for the investment committee. Your memo should be thorough, data-driven, and balanced.
 
-CRITICAL: You MUST perform EXTENSIVE web searches throughout your analysis. Do NOT write any section without first searching for relevant, up-to-date information. Search early and often - aim for at least 20-30 different searches to gather comprehensive data.
+CRITICAL INSTRUCTIONS:
+1. The AI ANALYSIS provided above is based on uploaded documents - use it as your PRIMARY source
+2. Extract key insights from the analysis (team assessment, market analysis, product evaluation, etc.)
+3. Use web search to SUPPLEMENT with current market data, competitor updates, and recent news
+4. Perform 10-15 focused web searches for additional context
+5. Clearly distinguish between insights from the document analysis and web research
 
 Company: ${deal.company.name}
 Deal: ${deal.title}
 Stage: ${deal.stage}
 Check Size Range: $${deal.check_size_min ? (deal.check_size_min/1000000).toFixed(1) : '?'}M - $${deal.check_size_max ? (deal.check_size_max/1000000).toFixed(1) : '?'}M
 Website: ${deal.company.website || 'Not provided'}
-Location: ${deal.company.location || 'Not provided'}
+Location: ${deal.company.location || 'Not provided'}${documentContext}
 
-Based on the following AI analysis, write a comprehensive investment memo. You MUST use web search EXTENSIVELY throughout your analysis. 
+Based on the following AI analysis (which includes insights from uploaded documents), write a comprehensive investment memo.
 
-For EACH major claim or data point you make, search for supporting evidence. Don't just rely on the provided analysis - actively search for:
+IMPORTANT: The analysis below was generated from uploaded documents about the company. Use this as your PRIMARY source of information, then SUPPLEMENT with web searches for:
 - Latest news about ${deal.company.name}
 - Recent competitor funding rounds and acquisitions
 - Current market size data and growth rates
@@ -78,18 +96,20 @@ For EACH major claim or data point you make, search for supporting evidence. Don
 - Customer testimonials and case studies
 - Technology trends affecting the market
 
-ANALYSIS DATA:
+DOCUMENT-BASED ANALYSIS (from uploaded files):
 ${JSON.stringify(latestAnalysis.result, null, 2)}
 
-CRITICAL INSTRUCTIONS FOR WEB SEARCH:
+The above analysis was generated from documents uploaded about the company. This should be your PRIMARY source of information.
+
+CRITICAL INSTRUCTIONS FOR SUPPLEMENTARY WEB SEARCH:
 1. Search for SPECIFIC information, not general queries
 2. Use multiple searches for different aspects (e.g., search separately for "${deal.company.name} funding", "${deal.company.name} competitors", "${deal.company.name} team", etc.)
 3. Search for recent data by including year markers (e.g., "2024", "2025", "latest")
 4. Verify all statistics and claims with web searches
 5. Look for contradictory information or risks
-6. Find at least 10-15 different sources throughout your analysis
+6. Find 8-12 high-quality sources to supplement the document analysis
 
-Write a comprehensive memo (~3,000 words) following this EXACT structure with the sections clearly defined:
+Write a comprehensive memo (2,500-3,000 words) following this EXACT structure. Be concise but thorough. If approaching length limits, prioritize quality over completeness:
 
 # Investment Memo: ${deal.company.name}
 
@@ -286,7 +306,7 @@ Remember to:
 - Use specific data and numbers throughout
 - When you find information via web search, cite it using markdown format: [source text](url)
 - Include citations for EVERY fact, statistic, or claim from web sources
-- Aim for at least 15-20 citations throughout the memo
+- Include 10-15 citations throughout the memo, mixing document insights and web sources
 - Balance optimism with realistic assessment
 - Address concerns proactively
 - Write in clear, professional language
@@ -305,7 +325,8 @@ Remember to:
         input: memoPrompt,
         tools: [{
           type: 'web_search'
-        }]
+        }],
+        max_output_tokens: 8000  // Increase output limit to prevent truncation
       }),
     })
 
@@ -404,6 +425,10 @@ Remember to:
       // Fix any malformed citations like ([domain][number]) to just [number]
       citedMemoText = citedMemoText.replace(/\(\[[^\]]+\]\[(\d+)\]\)/g, '[$1]')
       citedMemoText = citedMemoText.replace(/\[[^\]]+\]\[(\d+)\]/g, '[$1]')
+      // Fix citations like (domain [number]) to just [number]
+      citedMemoText = citedMemoText.replace(/\([^\)]+\s\[(\d+)\]\)/g, '[$1]')
+      // Fix citations like (domain[number]) to just [number]
+      citedMemoText = citedMemoText.replace(/\([^\)]+\[(\d+)\]\)/g, '[$1]')
     }
     
     const parsedSections = parseMemoSections(citedMemoText)

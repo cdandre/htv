@@ -76,8 +76,8 @@ function formatMemoContent(text: string): string {
     .replace(/<strong>/g, '<strong class="font-semibold">')
     .replace(/<em>/g, '<em class="italic">')
   
-  // Style citations with superscript
-  html = html.replace(/\[(\d+)\]/g, '<sup class="text-primary font-medium ml-0.5">[$1]</sup>')
+  // Style citations with clickable superscript links
+  html = html.replace(/\[(\d+)\]/g, '<sup class="text-primary font-medium ml-0.5"><a href="#source-$1" class="hover:underline">[$1]</a></sup>')
   
   return html
 }
@@ -639,7 +639,7 @@ export default function MemoDetailPage({ params }: { params: { id: string } }) {
                   <h2 className="text-xl font-semibold mb-4">Sources & References</h2>
                   <div className="space-y-3">
                     {content.sources.map((source: any) => (
-                      <Card key={source.index} className="p-4">
+                      <Card key={source.index} id={`source-${source.index}`} className="p-4">
                         <div className="flex items-start gap-3">
                           <Badge variant="outline" className="mt-0.5">
                             [{source.index}]

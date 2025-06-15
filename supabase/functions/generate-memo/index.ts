@@ -105,14 +105,19 @@ serve(async (req) => {
     // Generate memo using OpenAI Responses API
     const memoPrompt = `You are a senior venture capital partner at HTV writing a comprehensive investment memo for the investment committee. Your memo should be thorough, data-driven, and balanced.
 
-CRITICAL CITATION REQUIREMENTS:
-- YOU MUST include inline citations for EVERY fact, statistic, or claim you make
-- Citations MUST be in markdown link format: [text](url)
-- Every paragraph should have AT LEAST 2-3 citations
-- When you use web_search, IMMEDIATELY cite the information inline
-- Example: "The company [raised $5M in Series A](https://techcrunch.com/article) in 2024"
-- DO NOT write any facts without citations
-- DO NOT save citations for a separate section - they MUST be inline
+CRITICAL WEB SEARCH REQUIREMENTS:
+- You MUST use the web_search_preview tool at least 15 times throughout the memo
+- Search for specific, detailed information about the company, market, competitors, and trends
+- When you find information from web search, incorporate it naturally into your writing
+- The system will automatically add citations to your text
+- Every section should include multiple facts from web searches
+
+HOW TO USE WEB SEARCH EFFECTIVELY:
+1. Start each section by searching for relevant information
+2. Search for specific data points, statistics, and recent news
+3. Search for competitor information and market analysis
+4. Search for team backgrounds and company history
+5. Use the exact search queries suggested below
 
 CRITICAL INSTRUCTIONS:
 1. The AI ANALYSIS provided above is based on uploaded documents - use it as your PRIMARY source
@@ -170,19 +175,11 @@ REQUIRED WEB SEARCHES - YOU MUST PERFORM ALL OF THESE:
 
 WARNING: Many companies have similar names. ALWAYS verify you're researching ${deal.company.name} with domain ${companyDomain}, not a different company!
 
-CITATION FORMAT - THIS IS MANDATORY:
-- EVERY statement of fact MUST have an inline citation
-- Format: [descriptive text](full URL)
-- Examples of CORRECT citations:
-  - "The company [raised $10M in Series A funding](https://techcrunch.com/2024/01/15/adbuy-raises-10m) in January 2024"
-  - "The [global adtech market is valued at $886 billion](https://www.statista.com/statistics/adtech-market) and growing at 13.7% CAGR"
-  - "CEO John Smith [previously founded and sold TechCo for $50M](https://forbes.com/article/john-smith-exit)"
-- Examples of INCORRECT citations (DO NOT DO THIS):
-  - "The company raised $10M" (no citation)
-  - "According to TechCrunch, the company raised $10M" (no link)
-  - "The market is large [1]" (footnote style - use inline links instead)
-
-CRITICAL REMINDER: You have access to the web_search tool. USE IT! Every section should have multiple web searches and inline citations. The memo will be rejected if it lacks proper inline citations from web searches.
+WEB SEARCH ENFORCEMENT:
+- If you do not use web_search_preview at least 15 times, the memo will be automatically rejected
+- Start each major section by performing relevant web searches
+- Use specific search queries with company name and domain
+- The system will handle citation formatting automatically
 
 Write a comprehensive memo (2,500-3,000 words) following this EXACT structure. Be concise but thorough. If approaching length limits, prioritize quality over completeness:
 
@@ -413,13 +410,9 @@ REMEMBER:
         model: 'gpt-4.1',
         input: memoPrompt,
         tools: [{
-          type: 'web_search',
-          web_search: {
-            max_results: 20  // Get more search results
-          }
+          type: 'web_search_preview'
         }],
         tool_choice: 'auto',
-        include: ['web_search_call.results'],  // CRITICAL: Include web search results in response
         store: true,  // Store for conversation continuity
         max_output_tokens: 8000  // Increase output limit to prevent truncation
       }),
@@ -435,7 +428,11 @@ REMEMBER:
     }
 
     const response = await openaiResponse.json()
-    console.log('Full OpenAI response structure:', JSON.stringify(response, null, 2))
+    
+    // Log the full response for debugging
+    console.log('=== FULL OPENAI RESPONSE ===')
+    console.log(JSON.stringify(response, null, 2))
+    console.log('=== END RESPONSE ===')
 
     // Extract memo text and citations from Responses API output
     let memoText = ''
@@ -487,21 +484,43 @@ REMEMBER:
             }
           }
           
-          // Extract web search results
+          // Extract web search call (per documentation, this just contains the ID)
           if (item.type === 'web_search_call') {
-            console.log('Found web_search_call item')
-            if (item.results && Array.isArray(item.results)) {
-              webSources = webSources.concat(item.results)
-              console.log('Added web search results:', item.results.length)
-              console.log('Web search results sample:', JSON.stringify(item.results.slice(0, 2), null, 2))
+            console.log('Found web_search_call item:', item)
+            // This item just contains the ID and status, actual citations are in message annotations
+          }
+          
+          // Extract annotations from message content (this is where citations are)
+          if (item.type === 'message' && item.content) {
+            console.log('Processing message content for annotations')
+            if (Array.isArray(item.content)) {
+              for (const content of item.content) {
+                if (content.type === 'output_text' && content.annotations) {
+                  console.log('Found annotations:', content.annotations.length)
+                  // Extract URL citations from annotations
+                  for (const annotation of content.annotations) {
+                    if (annotation.type === 'url_citation') {
+                      webSources.push({
+                        url: annotation.url,
+                        title: annotation.title,
+                        start_index: annotation.start_index,
+                        end_index: annotation.end_index
+                      })
+                      console.log('Added URL citation:', annotation.url)
+                    }
+                  }
+                }
+              }
             }
           }
         }
       }
-    } else if (response.output_text) {
-      // Handle legacy direct output_text format
+    }
+    
+    // Also check for direct output_text (as shown in documentation examples)
+    if (!memoText && response.output_text) {
       memoText = response.output_text
-      console.log('Using legacy output_text format')
+      console.log('Using direct output_text format')
     }
     
     // Also check for web search results at the top level
@@ -561,23 +580,32 @@ REMEMBER:
     // Log a sample of the text before and after citation processing
     console.log('Sample text before citation processing:', memoText.substring(0, 500))
     
-    // Check if memo already has inline citations
-    const hasInlineCitations = /\[([^\]]+)\]\(https?:\/\/[^\)]+\)/.test(memoText)
-    console.log('Memo has inline citations:', hasInlineCitations)
-    console.log('Web sources available:', webSources.length)
-    
-    // Add inline citations to the memo text
+    // Process annotations to add inline citations
     let citedMemoText = memoText
     
-    // If we have web sources but no inline citations, add a note at the beginning
-    if (!hasInlineCitations && webSources.length > 0) {
-      console.log('WARNING: No inline citations found despite having', webSources.length, 'web sources')
-      console.log('Web sources that should have been cited:', webSources.map(s => s.url || s.link))
+    // If we have annotations with character positions, we need to insert citations
+    if (webSources.length > 0 && webSources[0].start_index !== undefined) {
+      console.log('Processing annotations with character positions')
       
-      // Add a note about missing citations
-      const citationNote = `*Note: The AI performed ${webSources.length} web searches but did not properly format inline citations. Sources are listed at the end of this memo.*\n\n`
-      citedMemoText = citationNote + citedMemoText
+      // Sort annotations by start_index in reverse order to avoid position shifts
+      const sortedAnnotations = [...webSources].sort((a, b) => b.start_index - a.start_index)
+      
+      // Insert citations at the specified positions
+      for (const annotation of sortedAnnotations) {
+        if (annotation.start_index !== undefined && annotation.end_index !== undefined) {
+          const citedText = memoText.substring(annotation.start_index, annotation.end_index)
+          const citation = `[${citedText}](${annotation.url})`
+          citedMemoText = citedMemoText.substring(0, annotation.start_index) + citation + citedMemoText.substring(annotation.end_index)
+        }
+      }
+      
+      console.log('Processed', sortedAnnotations.length, 'annotations')
     }
+    
+    // Check if citations were added
+    const hasInlineCitations = /\[([^\]]+)\]\(https?:\/\/[^\)]+\)/.test(citedMemoText)
+    console.log('Memo has inline citations after processing:', hasInlineCitations)
+    console.log('Web sources available:', webSources.length)
     
     if (sourcesMap.size > 0) {
       // Replace URLs in text with citation numbers

@@ -76,12 +76,14 @@ CRITICAL INSTRUCTIONS:
 4. Perform 10-15 focused web searches for additional context
 5. Clearly distinguish between insights from the document analysis and web research
 
-Company: ${deal.company.name}
-Deal: ${deal.title}
+COMPANY TO ANALYZE: ${deal.company.name}
+Deal Title: ${deal.title}
 Stage: ${deal.stage}
 Check Size Range: $${deal.check_size_min ? (deal.check_size_min/1000000).toFixed(1) : '?'}M - $${deal.check_size_max ? (deal.check_size_max/1000000).toFixed(1) : '?'}M
 Website: ${deal.company.website || 'Not provided'}
 Location: ${deal.company.location || 'Not provided'}${documentContext}
+
+CRITICAL: You are analyzing "${deal.company.name}" - make sure all web searches are about THIS specific company, not similarly named companies.
 
 Based on the following AI analysis (which includes insights from uploaded documents), write a comprehensive investment memo.
 
@@ -96,18 +98,22 @@ IMPORTANT: The analysis below was generated from uploaded documents about the co
 - Customer testimonials and case studies
 - Technology trends affecting the market
 
-DOCUMENT-BASED ANALYSIS (from uploaded files):
+DOCUMENT-BASED ANALYSIS (from uploaded files about ${deal.company.name}):
 ${JSON.stringify(latestAnalysis.result, null, 2)}
 
-The above analysis was generated from documents uploaded about the company. This should be your PRIMARY source of information.
+The above analysis was generated from documents uploaded about ${deal.company.name}. This is your PRIMARY source of company information.
 
-CRITICAL INSTRUCTIONS FOR SUPPLEMENTARY WEB SEARCH:
-1. Search for SPECIFIC information, not general queries
-2. Use multiple searches for different aspects (e.g., search separately for "${deal.company.name} funding", "${deal.company.name} competitors", "${deal.company.name} team", etc.)
-3. Search for recent data by including year markers (e.g., "2024", "2025", "latest")
-4. Verify all statistics and claims with web searches
-5. Look for contradictory information or risks
-6. Find 8-12 high-quality sources to supplement the document analysis
+REQUIRED WEB SEARCHES:
+1. Company verification: Search "${deal.company.name}" with their website "${deal.company.website || 'unknown'}" to ensure you have the right company
+2. Recent news: "${deal.company.name} news 2024 2025"
+3. Funding history: "${deal.company.name} funding rounds investment"
+4. Team backgrounds: Search for founder names from the analysis
+5. Market research: "[industry from analysis] market size growth rate 2024"
+6. Competitors: "${deal.company.name} competitors" AND "[industry] startups"
+7. HTV thesis fit: "HTV ventures portfolio" and "venture capital ${deal.stage} investments real estate tech"
+8. Industry reports: "[industry] venture capital investment trends 2024"
+
+For each web search result you use, include it as a markdown link in your text: [fact or quote](URL)
 
 Write a comprehensive memo (2,500-3,000 words) following this EXACT structure. Be concise but thorough. If approaching length limits, prioritize quality over completeness:
 
@@ -245,17 +251,26 @@ Provide a detailed description including:
 - Timeline for deployment
 
 ## Investment Thesis
+### Strategic Fit with HTV
+RESEARCH REQUIRED: Search for "HTV ventures portfolio" and "HTV ventures investment thesis" to understand their focus areas. Analyze how this deal aligns with HTV's:
+- Portfolio composition and sector focus
+- Stage preferences (${deal.stage} deals)
+- Check size sweet spot
+- Geographic focus
+- Value-add capabilities
+
 ### Why We Should Invest
-- Strategic fit with HTV's thesis
-- Market timing considerations
-- Team capability to execute
-- Potential for venture-scale returns
+- Alignment with HTV's investment mandate (based on your research)
+- Market timing and opportunity size
+- Team's ability to execute in this market
+- Potential for venture-scale returns (10x+)
+- Competitive advantages and moats
 
 ### Value-Add Opportunities
-- How HTV can help beyond capital
-- Relevant portfolio company synergies
-- Network connections and introductions
-- Strategic guidance areas
+- How HTV's expertise can accelerate growth
+- Potential synergies with portfolio companies
+- Network connections and customer introductions
+- Strategic guidance based on HTV's experience
 
 ## Risks & Mitigation
 ### Key Risks
@@ -302,17 +317,18 @@ For each major risk category:
 
 ---
 
-Remember to:
-- Use specific data and numbers throughout
-- When you find information via web search, cite it using markdown format: [source text](url)
-- Include citations for EVERY fact, statistic, or claim from web sources
-- Include 10-15 citations throughout the memo, mixing document insights and web sources
-- Balance optimism with realistic assessment
-- Address concerns proactively
-- Write in clear, professional language
-- Make a definitive recommendation
-- Use varied search queries to get comprehensive coverage
-- Search for both supporting AND contradictory evidence`
+CITATION REQUIREMENTS:
+- When using information from web search, ALWAYS cite it inline as: [text](url)
+- Example: "The market is growing at [15% annually](https://example.com/report)"
+- Include 10-15 web citations throughout the memo
+- Clearly indicate when information comes from uploaded documents vs web search
+- Every market statistic, competitor mention, or external data point needs a citation
+
+REMEMBER:
+- Base company details on the uploaded document analysis
+- Use web search to verify, update, and supplement with market context
+- Assess thesis fit by researching HTV's portfolio and investment focus
+- Make a clear recommendation based on both document insights and market research`
 
     const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
@@ -331,6 +347,8 @@ Remember to:
     })
 
     console.log('OpenAI Responses API called with web_search tool')
+    console.log('Request model:', 'gpt-4.1')
+    console.log('Max output tokens:', 8000)
 
     if (!openaiResponse.ok) {
       const error = await openaiResponse.json()
@@ -389,7 +407,23 @@ Remember to:
     const sourcesMap = new Map<string, any>()
     let citationIndex = 1
     
-    // Process web sources and assign citation numbers
+    // First, extract URLs from markdown links in the text
+    const markdownLinkPattern = /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g
+    let match
+    while ((match = markdownLinkPattern.exec(memoText)) !== null) {
+      const linkText = match[1]
+      const url = match[2]
+      if (!sourcesMap.has(url)) {
+        sourcesMap.set(url, {
+          index: citationIndex++,
+          title: linkText,
+          url: url,
+          snippet: ''
+        })
+      }
+    }
+    
+    // Then process any web sources from the API response
     for (const source of webSources) {
       const url = source.url || source.link
       if (url && !sourcesMap.has(url)) {
@@ -401,6 +435,9 @@ Remember to:
         })
       }
     }
+    
+    console.log('Total sources found:', sourcesMap.size)
+    console.log('Sources:', Array.from(sourcesMap.values()).map(s => ({ index: s.index, url: s.url })))
     
     // Add inline citations to the memo text
     let citedMemoText = memoText

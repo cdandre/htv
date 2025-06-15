@@ -430,6 +430,20 @@ Example citations from documents:
     // Generate memo using OpenAI Responses API
     const memoPrompt = `You are a senior venture capital partner at Home Technology Ventures (HTV), a specialized VC fund focused exclusively on transforming the housing and home industries.
 
+${vectorStoreId ? `🔴 CRITICAL INSTRUCTIONS:
+1. You have access to the file_search tool with vector store ID: ${vectorStoreId}
+2. This vector store contains ${uploadedFiles.length} uploaded documents about ${deal.company.name}
+3. YOU MUST USE file_search to search these documents BEFORE writing each section
+4. Start EVERY section by searching for relevant information in the documents
+5. Quote specific text, numbers, and facts from the documents
+6. Reference slide numbers, page numbers, or sections when quoting
+
+EXAMPLE WORKFLOW:
+- Use file_search("revenue ARR MRR growth") to find financial metrics
+- Quote: "According to slide 12, the company has achieved $2.5M ARR with 25% MoM growth"
+- Then use web_search to verify and find market context
+- Combine document insights with web research for comprehensive analysis` : ''}
+
 HTV INVESTMENT THESIS & FOCUS:
 - Mission: Partner with founders changing how we build, transact, finance, maintain, improve, and consume homes
 - Stage: Series A and Series B investments
@@ -559,11 +573,24 @@ REQUIRED WEB SEARCHES - YOU MUST PERFORM ALL OF THESE:
 WARNING: Many companies have similar names. ALWAYS verify you're researching ${deal.company.name} with domain ${companyDomain}, not a different company!
 
 TOOL USAGE ENFORCEMENT:
-- ${vectorStoreId ? 'USE FILE_SEARCH FIRST: Search uploaded documents for specific quotes and data' : 'Base analysis on the document insights provided'}
+- ${vectorStoreId ? '🔴 CRITICAL: You MUST use file_search tool AT LEAST 10 times throughout the memo' : 'Base analysis on the document insights provided'}
+- ${vectorStoreId ? '🔴 For EVERY section, use file_search FIRST to find relevant quotes from documents' : ''}
 - If you do not use web_search_preview at least 15 times, the memo will be automatically rejected
-- ${vectorStoreId ? 'Start each section with file_search for document quotes, then web searches' : 'Start each major section by performing relevant web searches'}
+- ${vectorStoreId ? 'Pattern: file_search → quote findings → web_search → cite sources' : 'Start each major section by performing relevant web searches'}
 - Use specific search queries with company name and domain
 - The system will handle citation formatting automatically
+
+${vectorStoreId ? `
+FILE_SEARCH EXAMPLES YOU MUST FOLLOW:
+1. For Executive Summary: file_search("revenue ARR growth metrics")
+2. For Team: file_search("founders CEO CTO team experience background")
+3. For Market: file_search("TAM market size addressable billion")
+4. For Product: file_search("product features technology platform demo")
+5. For Traction: file_search("customers clients users growth MRR")
+6. For Competition: file_search("competitors competition differentiation moat")
+7. For Financials: file_search("burn rate runway projections revenue forecast")
+
+YOU MUST USE file_search BEFORE WRITING EACH SECTION!` : ''}
 
 Write a comprehensive investment memo (5-8 pages, approximately 3,500-5,000 words) following this EXACT markdown structure. Use ## for main sections and ### for subsections. Be thorough and detailed, quoting extensively from the uploaded documents:
 
@@ -790,7 +817,24 @@ REMEMBER:
 - Make a clear recommendation based on both document insights and market research`
 
     console.log('Starting OpenAI Responses API call...')
+    console.log('Vector Store ID:', vectorStoreId)
     const apiStartTime = Date.now()
+    
+    // Build tools array
+    const tools = [{
+      type: 'web_search_preview',
+      search_context_size: 'medium'  // Balance quality and cost
+    }]
+    
+    if (vectorStoreId) {
+      tools.push({
+        type: 'file_search',
+        vector_store_ids: [vectorStoreId]
+      })
+      console.log('Added file_search tool with vector store:', vectorStoreId)
+    }
+    
+    console.log('Tools configured:', JSON.stringify(tools, null, 2))
     
     const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
@@ -801,14 +845,8 @@ REMEMBER:
       body: JSON.stringify({
         model: 'gpt-4.1',
         input: memoPrompt,
-        tools: [{
-          type: 'web_search_preview',
-          search_context_size: 'medium'  // Balance quality and cost
-        }, vectorStoreId ? {
-          type: 'file_search',
-          vector_store_ids: [vectorStoreId]
-        } : null].filter(Boolean),
-        tool_choice: vectorStoreId ? undefined : { type: 'web_search_preview' },  // Force web search if no documents
+        tools: tools,
+        tool_choice: vectorStoreId ? 'auto' : { type: 'web_search_preview' },  // Let AI choose tools if documents exist
         store: true,  // Store for conversation continuity
         max_output_tokens: 16000  // Increased for 5-8 page memo
       }),
@@ -830,6 +868,15 @@ REMEMBER:
     console.log('=== FULL OPENAI RESPONSE ===')
     console.log(JSON.stringify(response, null, 2))
     console.log('=== END RESPONSE ===')
+    
+    // Check if file_search was used
+    if (response.usage && response.usage.tools) {
+      console.log('=== TOOL USAGE ===')
+      console.log('Tools used:', JSON.stringify(response.usage.tools, null, 2))
+      const fileSearchUsed = response.usage.tools.some((tool: any) => tool.type === 'file_search')
+      console.log('File search used:', fileSearchUsed)
+      console.log('==================')
+    }
 
     // Extract memo text and citations from Responses API output
     let memoText = ''

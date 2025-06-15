@@ -135,9 +135,10 @@ export default function DealDetail({ deal }: DealDetailProps) {
       } else {
         toast({
           title: 'Error',
-        description: 'Failed to generate memo',
-        variant: 'destructive',
-      })
+          description: 'Failed to generate memo',
+          variant: 'destructive',
+        })
+      }
     } finally {
       setGeneratingMemo(false)
     }

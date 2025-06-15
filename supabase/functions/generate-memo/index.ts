@@ -53,6 +53,42 @@ serve(async (req) => {
     if (!latestAnalysis) {
       throw new Error('No analysis found for this deal')
     }
+    
+    // Extract company information from the analysis
+    const analysisResult = latestAnalysis.result || {}
+    
+    // Search for website/domain in various possible locations in the analysis
+    let extractedWebsite = ''
+    
+    // Check common fields
+    extractedWebsite = analysisResult.company_website || 
+                      analysisResult.website || 
+                      analysisResult.domain ||
+                      analysisResult.company_info?.website ||
+                      analysisResult.company_info?.domain ||
+                      analysisResult.company_overview?.website ||
+                      analysisResult.executive_summary?.match(/(?:website|domain):\s*([^\s,]+\.(?:com|ai|io|co|net|org))/i)?.[1] ||
+                      ''
+    
+    // If not found, search in the full analysis text for domain patterns
+    if (!extractedWebsite) {
+      const analysisText = JSON.stringify(analysisResult)
+      const domainMatch = analysisText.match(/([a-zA-Z0-9-]+\.(?:ai|com|io|co|net|org))(?=[^a-zA-Z0-9-]|$)/)
+      if (domainMatch && domainMatch[1] !== 'example.com') {
+        extractedWebsite = domainMatch[1]
+      }
+    }
+    
+    // Use extracted website if available, otherwise fall back to database
+    const companyWebsite = extractedWebsite || deal.company.website || ''
+    const companyDomain = companyWebsite.replace(/^https?:\/\//, '').replace(/\/.*$/, '')
+    
+    console.log('Analysis result sample:', JSON.stringify(analysisResult).substring(0, 500))
+    console.log('Company info - Name:', deal.company.name)
+    console.log('Company info - Website from DB:', deal.company.website)
+    console.log('Company info - Website extracted from analysis:', extractedWebsite)
+    console.log('Company info - Final website:', companyWebsite)
+    console.log('Company info - Domain:', companyDomain)
 
     // Get document contents if available
     let documentContext = ''
@@ -80,10 +116,13 @@ COMPANY TO ANALYZE: ${deal.company.name}
 Deal Title: ${deal.title}
 Stage: ${deal.stage}
 Check Size Range: $${deal.check_size_min ? (deal.check_size_min/1000000).toFixed(1) : '?'}M - $${deal.check_size_max ? (deal.check_size_max/1000000).toFixed(1) : '?'}M
-Website: ${deal.company.website || 'Not provided'}
+Website/Domain: ${companyWebsite || 'Not provided'} ${companyDomain ? `(${companyDomain})` : ''}
 Location: ${deal.company.location || 'Not provided'}${documentContext}
 
-CRITICAL: You are analyzing "${deal.company.name}" - make sure all web searches are about THIS specific company, not similarly named companies.
+CRITICAL: You are analyzing "${deal.company.name}" ${companyDomain ? `with domain ${companyDomain}` : ''}
+- If the company has a specific domain (like adbuy.ai vs adbuy.com), make sure ALL searches include the correct domain
+- Search for "${deal.company.name} ${companyDomain}" to ensure you find the right company
+- DO NOT research similarly named companies with different domains
 
 Based on the following AI analysis (which includes insights from uploaded documents), write a comprehensive investment memo.
 
@@ -103,17 +142,23 @@ ${JSON.stringify(latestAnalysis.result, null, 2)}
 
 The above analysis was generated from documents uploaded about ${deal.company.name}. This is your PRIMARY source of company information.
 
-REQUIRED WEB SEARCHES:
-1. Company verification: Search "${deal.company.name}" with their website "${deal.company.website || 'unknown'}" to ensure you have the right company
-2. Recent news: "${deal.company.name} news 2024 2025"
-3. Funding history: "${deal.company.name} funding rounds investment"
-4. Team backgrounds: Search for founder names from the analysis
-5. Market research: "[industry from analysis] market size growth rate 2024"
-6. Competitors: "${deal.company.name} competitors" AND "[industry] startups"
-7. HTV thesis fit: "HTV ventures portfolio" and "venture capital ${deal.stage} investments real estate tech"
-8. Industry reports: "[industry] venture capital investment trends 2024"
+REQUIRED WEB SEARCHES (use exact queries):
+1. Company verification: "${deal.company.name} ${companyDomain}" to ensure you have the RIGHT company
+2. Company website check: "site:${companyDomain}" or "${companyDomain} about team"
+3. Recent news: "${deal.company.name} ${companyDomain} news 2024 2025"
+4. Funding history: "${deal.company.name} ${companyDomain} funding investment"
+5. Team backgrounds: Search for specific founder names from the analysis with company domain
+6. Market research: Extract the specific industry/market from the analysis and search for size/growth
+7. Competitors: "${deal.company.name} ${companyDomain} competitors" 
+8. HTV portfolio fit: "HTV ventures portfolio proptech real estate" and "HTV ventures ${deal.stage}"
+9. Industry analysis: "[specific industry from analysis] venture capital trends 2024"
 
-For each web search result you use, include it as a markdown link in your text: [fact or quote](URL)
+WARNING: Many companies have similar names. ALWAYS verify you're researching ${deal.company.name} with domain ${companyDomain}, not a different company!
+
+CRITICAL: After EVERY web search, immediately use the information with a citation:
+- DO: "AdBuy.ai has [raised $2M in seed funding](https://actualurl.com)"
+- DO NOT: "AdBuy has raised $2M in seed funding" (missing citation)
+- DO NOT: Write facts without URLs
 
 Write a comprehensive memo (2,500-3,000 words) following this EXACT structure. Be concise but thorough. If approaching length limits, prioritize quality over completeness:
 
@@ -318,11 +363,15 @@ For each major risk category:
 ---
 
 CITATION REQUIREMENTS:
-- When using information from web search, ALWAYS cite it inline as: [text](url)
-- Example: "The market is growing at [15% annually](https://example.com/report)"
-- Include 10-15 web citations throughout the memo
-- Clearly indicate when information comes from uploaded documents vs web search
-- Every market statistic, competitor mention, or external data point needs a citation
+- When using ANY information from web search, you MUST cite it inline using markdown links
+- Format: [exact text or fact](full URL)
+- Examples:
+  - "The market is valued at [$2.5 billion](https://example.com/market-report)"
+  - "According to [TechCrunch](https://techcrunch.com/article), the company raised $10M"
+  - "AdBuy operates in the [$400B digital advertising market](https://statista.com/stats)"
+- EVERY fact from web search needs a citation - no exceptions
+- Include 10-15 citations minimum throughout the memo
+- When citing the company's own website, use the full URL with domain
 
 REMEMBER:
 - Base company details on the uploaded document analysis
@@ -409,10 +458,12 @@ REMEMBER:
     
     // First, extract URLs from markdown links in the text
     const markdownLinkPattern = /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g
+    const foundLinks: string[] = []
     let match
     while ((match = markdownLinkPattern.exec(memoText)) !== null) {
       const linkText = match[1]
       const url = match[2]
+      foundLinks.push(`[${linkText}](${url})`)
       if (!sourcesMap.has(url)) {
         sourcesMap.set(url, {
           index: citationIndex++,
@@ -422,6 +473,8 @@ REMEMBER:
         })
       }
     }
+    console.log('Markdown links found in memo:', foundLinks.length)
+    console.log('Sample links:', foundLinks.slice(0, 3))
     
     // Then process any web sources from the API response
     for (const source of webSources) {
@@ -438,6 +491,9 @@ REMEMBER:
     
     console.log('Total sources found:', sourcesMap.size)
     console.log('Sources:', Array.from(sourcesMap.values()).map(s => ({ index: s.index, url: s.url })))
+    
+    // Log a sample of the text before and after citation processing
+    console.log('Sample text before citation processing:', memoText.substring(0, 500))
     
     // Add inline citations to the memo text
     let citedMemoText = memoText
@@ -467,6 +523,9 @@ REMEMBER:
       // Fix citations like (domain[number]) to just [number]
       citedMemoText = citedMemoText.replace(/\([^\)]+\[(\d+)\]\)/g, '[$1]')
     }
+    
+    console.log('Sample text after citation processing:', citedMemoText.substring(0, 500))
+    console.log('Citations replaced:', sourcesMap.size > 0 ? 'Yes' : 'No')
     
     const parsedSections = parseMemoSections(citedMemoText)
     const memoContent = {

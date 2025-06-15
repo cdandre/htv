@@ -262,7 +262,7 @@ WEB SEARCH ENFORCEMENT:
 - Use specific search queries with company name and domain
 - The system will handle citation formatting automatically
 
-Write a focused investment memo (1,500-2,000 words) following this structure. Be concise and direct:
+Write a focused investment memo (1,500-2,000 words) following this EXACT markdown structure. Use ## for main sections and ### for subsections:
 
 # Investment Memo: ${deal.company.name}
 
@@ -838,6 +838,50 @@ function parseMemoSections(content: string): Record<string, string> {
     'Next Steps': 'next_steps',
     'Use of Funds': 'use_of_funds',
     'Proposed Terms': 'proposed_terms'
+  }
+
+  // Check if content has markdown headers
+  const hasMarkdownHeaders = content.includes('## ')
+  
+  if (!hasMarkdownHeaders) {
+    console.log('No markdown headers found, treating as plain text')
+    // If no markdown headers, parse based on bold text patterns
+    const boldSectionPattern = /\*\*(.*?)\*\*/g
+    let match
+    let lastIndex = 0
+    let currentSectionName = ''
+    
+    while ((match = boldSectionPattern.exec(content)) !== null) {
+      const boldText = match[1]
+      const matchIndex = match.index
+      
+      // Check if this bold text looks like a section header
+      if (boldText && Object.keys(sectionKeyMap).some(key => boldText.includes(key))) {
+        // Save previous section
+        if (currentSectionName && lastIndex < matchIndex) {
+          const sectionContent = content.substring(lastIndex, matchIndex).trim()
+          const key = sectionKeyMap[currentSectionName] || currentSectionName.toLowerCase().replace(/\s+/g, '_')
+          sections[key] = sectionContent
+        }
+        currentSectionName = boldText
+        lastIndex = matchIndex + match[0].length
+      }
+    }
+    
+    // Save last section
+    if (currentSectionName && lastIndex < content.length) {
+      const sectionContent = content.substring(lastIndex).trim()
+      const key = sectionKeyMap[currentSectionName] || currentSectionName.toLowerCase().replace(/\s+/g, '_')
+      sections[key] = sectionContent
+    }
+    
+    // If still no sections found, use full content as executive summary
+    if (Object.keys(sections).length === 0) {
+      sections['executive_summary'] = content.substring(0, 2000) // First 2000 chars
+      sections['full_content'] = content
+    }
+    
+    return sections
   }
 
   for (const line of lines) {

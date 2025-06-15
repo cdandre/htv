@@ -21,8 +21,17 @@ export async function generateMemoSection(
     return new Response('ok', { headers: corsHeaders })
   }
 
+  let memoId: string
+  let dealData: any
+  let analysisData: any
+  let vectorStoreId: string | null
+
   try {
-    const { memoId, dealData, analysisData, vectorStoreId } = await req.json()
+    const body = await req.json()
+    memoId = body.memoId
+    dealData = body.dealData
+    analysisData = body.analysisData
+    vectorStoreId = body.vectorStoreId
     const authHeader = req.headers.get('Authorization')!
     
     // Initialize Supabase clients
@@ -154,28 +163,29 @@ export async function generateMemoSection(
     console.error(`Error generating ${config.sectionType}:`, error)
     
     // Update section status to failed
-    try {
-      const { memoId } = await req.json()
-      const supabaseService = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      )
-      
-      await supabaseService
-        .from('investment_memo_sections')
-        .update({
-          status: 'failed',
-          error: error.message,
-          completed_at: new Date().toISOString()
-        })
-        .eq('memo_id', memoId)
-        .eq('section_type', config.sectionType)
-    } catch (e) {
-      console.error('Failed to update error status:', e)
+    if (memoId) {
+      try {
+        const supabaseService = createClient(
+          Deno.env.get('SUPABASE_URL')!,
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        )
+        
+        await supabaseService
+          .from('investment_memo_sections')
+          .update({
+            status: 'failed',
+            error: error.message,
+            completed_at: new Date().toISOString()
+          })
+          .eq('memo_id', memoId)
+          .eq('section_type', config.sectionType)
+      } catch (e) {
+        console.error('Failed to update error status:', e)
+      }
     }
 
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Failed to generate section' }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

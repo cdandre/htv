@@ -262,17 +262,15 @@ WEB SEARCH ENFORCEMENT:
 - Use specific search queries with company name and domain
 - The system will handle citation formatting automatically
 
-Write a comprehensive memo (2,500-3,000 words) following this EXACT structure. Be concise but thorough. If approaching length limits, prioritize quality over completeness:
+Write a focused investment memo (1,500-2,000 words) following this structure. Be concise and direct:
 
 # Investment Memo: ${deal.company.name}
 
 ## Executive Summary
-Write 2-3 paragraphs that include:
-- Company overview and what they do
-- Investment opportunity and proposed terms
-- Key investment highlights (3-4 bullet points)
-- Investment recommendation with rationale
-- Expected returns and exit timeline
+- Company overview and HTV thesis fit
+- Investment recommendation (invest/pass)
+- Key highlights (3 bullet points)
+- Proposed terms: Check size and valuation
 
 ## Company Overview
 Provide a detailed description including:
@@ -500,7 +498,7 @@ REMEMBER:
         }],
         tool_choice: { type: 'web_search_preview' },  // Force web search usage
         store: true,  // Store for conversation continuity
-        max_output_tokens: 8000  // Increase output limit to prevent truncation
+        max_output_tokens: 4096  // Standard limit for better reliability
       }),
     })
 
@@ -616,12 +614,18 @@ REMEMBER:
     
     console.log('Final memo text length:', memoText.length)
     console.log('First 1000 chars of memo:', memoText.substring(0, 1000))
+    console.log('Last 500 chars of memo:', memoText.substring(memoText.length - 500))
     console.log('Found web sources count:', webSources.length)
     console.log('Web sources sample:', webSources.slice(0, 2))
     
     if (!memoText) {
       console.error('No memo content in response')
       throw new Error('Failed to generate memo content')
+    }
+    
+    // Check if memo seems truncated
+    if (memoText.length > 0 && !memoText.includes('## Recommendation')) {
+      console.warn('WARNING: Memo appears truncated - missing Recommendation section')
     }
     // Process citations - create a map of sources
     const sourcesMap = new Map<string, any>()
@@ -672,6 +676,7 @@ REMEMBER:
     // If we have annotations with character positions, we need to insert citations
     if (webSources.length > 0 && webSources[0].start_index !== undefined) {
       console.log('Processing annotations with character positions')
+      console.log('Number of annotations:', webSources.length)
       
       // Sort annotations by start_index in reverse order to avoid position shifts
       const sortedAnnotations = [...webSources].sort((a, b) => b.start_index - a.start_index)
@@ -680,8 +685,18 @@ REMEMBER:
       for (const annotation of sortedAnnotations) {
         if (annotation.start_index !== undefined && annotation.end_index !== undefined) {
           const citedText = memoText.substring(annotation.start_index, annotation.end_index)
-          const citation = `[${citedText}](${annotation.url})`
-          citedMemoText = citedMemoText.substring(0, annotation.start_index) + citation + citedMemoText.substring(annotation.end_index)
+          console.log(`Processing citation: "${citedText}" -> ${annotation.url}`)
+          
+          // OpenAI might already have added brackets, check for this
+          if (citedText.match(/^\[.*\]$/)) {
+            // Already has brackets, just add the URL
+            const citation = `${citedText}(${annotation.url})`
+            citedMemoText = citedMemoText.substring(0, annotation.start_index) + citation + citedMemoText.substring(annotation.end_index)
+          } else {
+            // Add brackets and URL
+            const citation = `[${citedText}](${annotation.url})`
+            citedMemoText = citedMemoText.substring(0, annotation.start_index) + citation + citedMemoText.substring(annotation.end_index)
+          }
         }
       }
       
@@ -727,7 +742,18 @@ REMEMBER:
     console.log('Sample text after citation processing:', citedMemoText.substring(0, 500))
     console.log('Citations replaced:', sourcesMap.size > 0 ? 'Yes' : 'No')
     
+    // Clean up any malformed citations
+    citedMemoText = citedMemoText
+      .replace(/\[(\d+)\]\]\[(\d+)\]/g, '[$1]') // Fix [1]][1] to [1]
+      .replace(/\[([^\]]+)\]\[(\d+)\]/g, '[$1]') // Fix [text][1] to [text]
+      .replace(/\]\]/g, ']') // Remove double brackets
+    
+    console.log('Final memo length:', citedMemoText.length)
+    console.log('First 1000 chars of final memo:', citedMemoText.substring(0, 1000))
+    
     const parsedSections = parseMemoSections(citedMemoText)
+    console.log('Parsed sections:', Object.keys(parsedSections))
+    
     const memoContent = {
       raw: citedMemoText,
       ...parsedSections,
@@ -740,6 +766,9 @@ REMEMBER:
         sources_count: sourcesMap.size
       }
     }
+    
+    console.log('Memo content keys:', Object.keys(memoContent))
+    console.log('Has executive summary:', !!memoContent.executive_summary)
 
     // Store the memo using service role key
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!

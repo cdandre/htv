@@ -130,7 +130,26 @@ serve(async (req) => {
     }
 
     // Generate memo using OpenAI Responses API
-    const memoPrompt = `You are a senior venture capital partner at HTV. Your task is to analyze ${deal.company.name} and write an investment memo.
+    const memoPrompt = `You are a senior venture capital partner at Home Technology Ventures (HTV), a specialized VC fund focused exclusively on transforming the housing and home industries.
+
+HTV INVESTMENT THESIS & FOCUS:
+- Mission: Partner with founders changing how we build, transact, finance, maintain, improve, and consume homes
+- Stage: Series A and Series B investments
+- Focus Areas:
+  • Homebuilding - Tech to address the 6M home shortage
+  • Mortgage & Finance - Increasing housing attainability
+  • Real Estate Brokerage - Digital transformation
+  • Insurance - Home insurance innovation
+  • Property Management - Tech solutions
+  • Home Services - Digital platforms for maintenance
+  • Home Improvement - Tech-enabled renovation
+  • Home Health - Housing/healthcare intersection
+- Founded by Christopher Langford (ex-Lowe's Ventures)
+- Portfolio: Key (co-ownership), Nestment (co-buying), Moved (moving concierge), etc.
+
+Your task is to analyze ${deal.company.name} and assess fit with HTV's housing/home tech thesis.
+
+⚠️ CRITICAL: If the company is NOT in housing/home/real estate/construction tech, clearly state this upfront and explain why it's outside HTV's investment mandate.
 
 DOCUMENT-BASED COMPANY INFORMATION (YOUR PRIMARY SOURCE):
 Based on the uploaded pitch deck and documents, here are the VERIFIED FACTS about the company:
@@ -151,11 +170,18 @@ ${JSON.stringify(latestAnalysis.result, null, 2)}
 
 ${documentContext}
 
-STEP 1 - UNDERSTAND THE COMPANY FROM DOCUMENTS:
-Review the above analysis carefully. This tells you:
-- What the company does (from their own pitch deck)
-- Their team, traction, and business model
-- Their own claims about market size and opportunity
+STEP 1 - DEEP DIVE INTO UPLOADED DOCUMENTS:
+The document analysis above contains key insights from the pitch deck. Search through it for:
+- Company's value proposition for housing/home industry
+- Evidence of solving real problems for homeowners, builders, or real estate professionals
+- Team backgrounds - look for housing/construction/real estate experience
+- Customer traction - any homebuilders, brokers, property managers as customers?
+- Business model - B2B selling to housing industry or B2B2C through housing partners?
+- Market size claims - how big is their segment of the housing market?
+- Technology differentiation - what's unique about their approach?
+- Financial metrics - revenue, burn rate, runway from the deck
+
+IMPORTANT: Quote specific facts and figures from the document analysis when writing the memo.
 
 STEP 2 - PERFORM WEB SEARCHES TO VERIFY AND SUPPLEMENT:
 Now perform web searches to supplement the document insights:
@@ -164,6 +190,9 @@ Now perform web searches to supplement the document insights:
 3. Search: "${deal.company.name} ${companyDomain} team founders"
 4. Search: "${companyDomain} website about team product"
 5. Search: "${deal.company.name} competitors" (then verify they compete with ${companyDomain})
+6. Search: "${deal.company.name} real estate proptech housing"
+7. Search: "proptech ${deal.stage} investments 2024 2025"
+8. Search: "${deal.company.name} homebuilders brokers property managers customers"
 
 CRITICAL WEB SEARCH REQUIREMENTS:
 - Base your understanding on the DOCUMENT ANALYSIS first
@@ -370,25 +399,28 @@ Provide a detailed description including:
 
 ## Investment Thesis
 ### Strategic Fit with HTV
-RESEARCH REQUIRED: Search for "HTV ventures portfolio" and "HTV ventures investment thesis" to understand their focus areas. Analyze how this deal aligns with HTV's:
-- Portfolio composition and sector focus
-- Stage preferences (${deal.stage} deals)
-- Check size sweet spot
-- Geographic focus
-- Value-add capabilities
+Evaluate how this deal aligns with HTV's housing/home tech focus:
+- Which HTV focus area does this fit? (Homebuilding, Mortgage/Finance, Real Estate, Insurance, Property Mgmt, Home Services, Home Improvement, Home Health)
+- Does it address the housing shortage or improve housing attainability?
+- Is this a Series A/B opportunity (HTV's sweet spot)?
+- Does the team have domain expertise in housing/construction/real estate?
+- Can HTV's Lowe's heritage and industry connections add value?
 
 ### Why We Should Invest
-- Alignment with HTV's investment mandate (based on your research)
-- Market timing and opportunity size
-- Team's ability to execute in this market
-- Potential for venture-scale returns (10x+)
-- Competitive advantages and moats
+- Clear alignment with HTV's mission to transform housing/home industries
+- Solving a significant problem in the residential ecosystem
+- Large addressable market within housing (worth $30T+ in US)
+- Strong founder-market fit with housing industry experience
+- Potential to leverage HTV's network (homebuilders, Lowe's, other portfolio cos)
+- Venture-scale opportunity (10x+ potential) in housing transformation
 
 ### Value-Add Opportunities
-- How HTV's expertise can accelerate growth
-- Potential synergies with portfolio companies
-- Network connections and customer introductions
-- Strategic guidance based on HTV's experience
+- Introductions to major homebuilders and real estate companies
+- Leverage Christopher Langford's housing industry expertise
+- Potential pilot opportunities with Lowe's ecosystem
+- Synergies with HTV portfolio (Key, Nestment, Moved, etc.)
+- Strategic guidance on navigating housing industry dynamics
+- Access to HTV's network of proptech investors and advisors
 
 ## Risks & Mitigation
 ### Key Risks
@@ -414,18 +446,19 @@ For each major risk category:
 
 ## Recommendation
 ### Investment Decision
-- Clear invest/pass recommendation
-- Rationale for the decision
-- Any conditions or requirements
-- Follow-up diligence items
+- Clear invest/pass recommendation based on HTV thesis fit
+- Does this transform how we build, transact, finance, maintain, or improve homes?
+- Is the team capable of navigating the complex housing industry?
+- Can HTV's expertise and network meaningfully accelerate this company?
+- Key concerns or conditions for investment
 
 ### Proposed Terms
-- Investment amount: $X
+- Investment amount: $X (typical HTV Series A/B range)
 - Pre-money valuation: $X
 - Post-money ownership: X%
-- Board representation: [Yes/No]
-- Key terms and protections
-- Co-investors and allocation
+- Board representation: [Christopher Langford or designee]
+- Key terms: Pro-rata rights, information rights, board observer
+- Strategic value-add: Lowe's pilot, homebuilder intros, proptech network
 
 ## Next Steps
 - Immediate action items with owners

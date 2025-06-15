@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { memoId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const supabase = await createClient()
@@ -21,7 +21,7 @@ export async function GET(
         *,
         investment_memo_sections(*)
       `)
-      .eq('id', params.memoId)
+      .eq('id', params.id)
       .single()
 
     if (memoError || !memo) {

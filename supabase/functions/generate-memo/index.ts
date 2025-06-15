@@ -483,7 +483,19 @@ ${JSON.stringify(latestAnalysis.result, null, 2)}
 ${documentContext}
 
 STEP 1 - ANALYZE THE UPLOADED DOCUMENTS (YOUR PRIMARY SOURCE):
-${vectorStoreId ? `I have uploaded ${uploadedFiles.length} document(s) to a vector store (ID: ${vectorStoreId}). USE THE FILE_SEARCH TOOL to search and extract:` : 'The AI analysis above contains document insights. Extract:'}
+${vectorStoreId ? `🔴 MANDATORY: You MUST use the file_search tool to search the ${uploadedFiles.length} document(s) in vector store ID: ${vectorStoreId}
+
+REQUIRED file_search queries you MUST execute:
+- file_search("company overview mission vision")
+- file_search("revenue ARR MRR growth traction")
+- file_search("team founders CEO CTO experience")
+- file_search("market TAM SAM SOM size")
+- file_search("product features technology")
+- file_search("customers clients testimonials")
+- file_search("financial projections forecast")
+- file_search("funding round valuation")
+
+Extract the following from the documents:` : 'The AI analysis above contains document insights. Extract:'}
 - Company's exact value proposition from their pitch deck
 - Specific slides about market size, TAM, and growth projections
 - Team slide - founders' names, backgrounds, prior experience
@@ -848,7 +860,8 @@ REMEMBER:
         tools: tools,
         tool_choice: vectorStoreId ? 'auto' : { type: 'web_search_preview' },  // Let AI choose tools if documents exist
         store: true,  // Store for conversation continuity
-        max_output_tokens: 16000  // Increased for 5-8 page memo
+        max_output_tokens: 16000,  // Increased for 5-8 page memo
+        include: ["file_search_call.results"]  // Include search results for debugging
       }),
     })
 
@@ -881,6 +894,7 @@ REMEMBER:
     // Extract memo text and citations from Responses API output
     let memoText = ''
     let webSources: any[] = []
+    let fileCitations: any[] = []
     
     // Log to understand response structure better
     console.log('Response output type:', typeof response.output)
@@ -934,6 +948,18 @@ REMEMBER:
             // This item just contains the ID and status, actual citations are in message annotations
           }
           
+          // Extract file search call
+          if (item.type === 'file_search_call') {
+            console.log('Found file_search_call item:', item)
+            console.log('Queries:', item.queries)
+            console.log('Status:', item.status)
+            if (item.search_results) {
+              console.log('Search results count:', item.search_results.length)
+              console.log('First search result:', item.search_results[0])
+            }
+            // The actual file citations are in the message annotations
+          }
+          
           // Extract annotations from message content (this is where citations are)
           if (item.type === 'message' && item.content) {
             console.log('Processing message content for annotations')
@@ -941,7 +967,7 @@ REMEMBER:
               for (const content of item.content) {
                 if (content.type === 'output_text' && content.annotations) {
                   console.log('Found annotations:', content.annotations.length)
-                  // Extract URL citations from annotations
+                  // Extract citations from annotations
                   for (const annotation of content.annotations) {
                     if (annotation.type === 'url_citation') {
                       webSources.push({
@@ -950,7 +976,15 @@ REMEMBER:
                         start_index: annotation.start_index,
                         end_index: annotation.end_index
                       })
-                      console.log('Added URL citation:', annotation.url)
+                    } else if (annotation.type === 'file_citation') {
+                      console.log('Found file citation:', annotation)
+                      fileCitations.push({
+                        file_id: annotation.file_id,
+                        filename: annotation.filename,
+                        index: annotation.index,
+                        start_index: annotation.start_index || annotation.index,
+                        end_index: annotation.end_index || annotation.index
+                      })
                     }
                   }
                 }
@@ -977,6 +1011,8 @@ REMEMBER:
     console.log('Last 500 chars of memo:', memoText.substring(memoText.length - 500))
     console.log('Found web sources count:', webSources.length)
     console.log('Web sources sample:', webSources.slice(0, 2))
+    console.log('Found file citations count:', fileCitations.length)
+    console.log('File citations sample:', fileCitations.slice(0, 3))
     
     if (!memoText) {
       console.error('No memo content in response')

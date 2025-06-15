@@ -73,9 +73,33 @@ serve(async (req) => {
     // If not found, search in the full analysis text for domain patterns
     if (!extractedWebsite) {
       const analysisText = JSON.stringify(analysisResult)
-      const domainMatch = analysisText.match(/([a-zA-Z0-9-]+\.(?:ai|com|io|co|net|org))(?=[^a-zA-Z0-9-]|$)/)
-      if (domainMatch && domainMatch[1] !== 'example.com') {
-        extractedWebsite = domainMatch[1]
+      
+      // First try to find domains that match the company name
+      const companyNameLower = deal.company.name.toLowerCase().replace(/\s+/g, '')
+      const domainPattern = new RegExp(`(${companyNameLower}\\.[a-zA-Z]{2,6})`, 'i')
+      const companyDomainMatch = analysisText.match(domainPattern)
+      
+      if (companyDomainMatch) {
+        extractedWebsite = companyDomainMatch[1]
+        console.log('Found domain matching company name:', extractedWebsite)
+      } else {
+        // Fallback to any domain pattern, but prefer .ai domains for AI companies
+        const allDomains = analysisText.match(/([a-zA-Z0-9-]+\.(?:ai|com|io|co|net|org))(?=[^a-zA-Z0-9-]|$)/g) || []
+        
+        // Filter out common domains that are not the company
+        const filteredDomains = allDomains.filter(d => 
+          !['example.com', 'gmail.com', 'linkedin.com', 'twitter.com'].includes(d.toLowerCase())
+        )
+        
+        // Prefer .ai domains for tech companies
+        const aiDomain = filteredDomains.find(d => d.endsWith('.ai'))
+        if (aiDomain) {
+          extractedWebsite = aiDomain
+          console.log('Found .ai domain:', extractedWebsite)
+        } else if (filteredDomains.length > 0) {
+          extractedWebsite = filteredDomains[0]
+          console.log('Found domain:', extractedWebsite)
+        }
       }
     }
     
@@ -83,12 +107,14 @@ serve(async (req) => {
     const companyWebsite = extractedWebsite || deal.company.website || ''
     const companyDomain = companyWebsite.replace(/^https?:\/\//, '').replace(/\/.*$/, '')
     
-    console.log('Analysis result sample:', JSON.stringify(analysisResult).substring(0, 500))
-    console.log('Company info - Name:', deal.company.name)
-    console.log('Company info - Website from DB:', deal.company.website)
-    console.log('Company info - Website extracted from analysis:', extractedWebsite)
-    console.log('Company info - Final website:', companyWebsite)
-    console.log('Company info - Domain:', companyDomain)
+    console.log('=== COMPANY IDENTIFICATION ===')
+    console.log('Company Name:', deal.company.name)
+    console.log('Website from DB:', deal.company.website || 'Not in database')
+    console.log('Website from Document Analysis:', extractedWebsite || 'Not found in analysis')
+    console.log('Final Website Used:', companyWebsite || 'None')
+    console.log('Domain for Searches:', companyDomain || 'None')
+    console.log('Analysis contains domain info:', analysisText.includes('.ai') ? 'Yes (.ai domain found)' : analysisText.includes('.com') ? 'Yes (.com domain found)' : 'No domain found')
+    console.log('===========================')
 
     // Get document contents if available
     let documentContext = ''
@@ -103,25 +129,46 @@ serve(async (req) => {
     }
 
     // Generate memo using OpenAI Responses API
-    const memoPrompt = `STOP! Before writing ANYTHING, you must first perform web searches.
+    const memoPrompt = `You are a senior venture capital partner at HTV. Your task is to analyze ${deal.company.name} and write an investment memo.
 
-You are a senior venture capital partner at HTV. Your task is to research ${deal.company.name} and write an investment memo.
+DOCUMENT-BASED COMPANY INFORMATION (YOUR PRIMARY SOURCE):
+Based on the uploaded pitch deck and documents, here are the VERIFIED FACTS about the company:
+- Company Name: ${deal.company.name}
+- Company Domain: ${companyDomain || 'Not found - search for the correct domain'}
+- Stage: ${deal.stage}
+- Documents uploaded: ${deal.documents?.length || 0} files
 
-STEP 1 - PERFORM WEB SEARCHES FIRST (REQUIRED):
-Before writing any content, perform these web searches:
+${companyDomain ? `
+⚠️ CRITICAL DOMAIN VERIFICATION:
+- The company domain is ${companyDomain} (verified from uploaded documents)
+- DO NOT confuse with similar domains (e.g., adbuy.com vs adbuy.ai are DIFFERENT companies)
+- ALWAYS include "${companyDomain}" in your searches about THIS company
+` : '⚠️ Domain not found in documents - you must search to find the correct company website'}
+
+DOCUMENT ANALYSIS (extracted from uploaded pitch deck):
+${JSON.stringify(latestAnalysis.result, null, 2)}
+
+${documentContext}
+
+STEP 1 - UNDERSTAND THE COMPANY FROM DOCUMENTS:
+Review the above analysis carefully. This tells you:
+- What the company does (from their own pitch deck)
+- Their team, traction, and business model
+- Their own claims about market size and opportunity
+
+STEP 2 - PERFORM WEB SEARCHES TO VERIFY AND SUPPLEMENT:
+Now perform web searches to supplement the document insights:
 1. Search: "${deal.company.name} ${companyDomain} company overview"
-2. Search: "${deal.company.name} ${companyDomain} funding history"
+2. Search: "${deal.company.name} ${companyDomain} funding history"  
 3. Search: "${deal.company.name} ${companyDomain} team founders"
-4. Search: "${deal.company.name} competitors market size"
-5. Search: "${deal.stage} venture capital investments 2024 2025"
-
-After completing these initial searches, continue with more searches as you write each section.
+4. Search: "${companyDomain} website about team product"
+5. Search: "${deal.company.name} competitors" (then verify they compete with ${companyDomain})
 
 CRITICAL WEB SEARCH REQUIREMENTS:
-- You MUST perform at least 15 web searches total
-- Start by searching, THEN write based on what you find
-- The system will automatically add citations to your text
-- Every paragraph should include facts from your web searches
+- Base your understanding on the DOCUMENT ANALYSIS first
+- Use web search to UPDATE and SUPPLEMENT document insights
+- ALWAYS include ${companyDomain} in searches about the company
+- Verify you're researching the RIGHT company (${deal.company.name} at ${companyDomain})
 
 CRITICAL INSTRUCTIONS:
 1. The AI ANALYSIS provided above is based on uploaded documents - use it as your PRIMARY source

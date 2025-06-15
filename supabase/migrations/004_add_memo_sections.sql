@@ -45,9 +45,9 @@ CREATE POLICY "Users can view memo sections in their organization" ON investment
     EXISTS (
       SELECT 1 FROM investment_memos im
       JOIN deals d ON d.id = im.deal_id
-      JOIN user_organizations uo ON uo.organization_id = d.organization_id
+      JOIN user_profiles up ON up.organization_id = d.organization_id
       WHERE im.id = investment_memo_sections.memo_id
-      AND uo.user_id = auth.uid()
+      AND up.id = auth.uid()
     )
   );
 

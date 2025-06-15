@@ -1,0 +1,3 @@
+[function]
+# Maximum execution time in seconds (max allowed is 540 seconds / 9 minutes)
+timeout = 540

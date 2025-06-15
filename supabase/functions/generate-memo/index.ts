@@ -11,10 +11,6 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  // Set a timeout for the entire function (25 minutes - Supabase limit is 30)
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 25 * 60 * 1000)
-
   try {
     const { dealId } = await req.json()
     const authHeader = req.headers.get('Authorization')!
@@ -802,7 +798,6 @@ REMEMBER:
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${openaiKey}`,
       },
-      signal: controller.signal,
       body: JSON.stringify({
         model: 'gpt-4.1',
         input: memoPrompt,
@@ -1119,22 +1114,7 @@ REMEMBER:
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error: any) {
-    clearTimeout(timeoutId)
     console.error('Error generating memo:', error)
-    
-    // Check if it's an abort error (timeout)
-    if (error.name === 'AbortError') {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Request timeout', 
-          message: 'Memo generation took too long. This can happen with large documents. Please try again.' 
-        }),
-        { 
-          status: 504,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
-    }
     
     return new Response(
       JSON.stringify({ error: error.message || 'Failed to generate memo' }),
@@ -1143,8 +1123,6 @@ REMEMBER:
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
-  } finally {
-    clearTimeout(timeoutId)
   }
 })
 

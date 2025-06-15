@@ -87,11 +87,18 @@ export default function DealDetail({ deal }: DealDetailProps) {
   const handleGenerateMemo = async () => {
     setGeneratingMemo(true)
     try {
+      // Create an AbortController with a 9-minute timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 540000) // 9 minutes
+      
       const response = await fetch('/api/memos/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dealId: deal.id }),
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
       
       const data = await response.json()
       
@@ -104,6 +111,12 @@ export default function DealDetail({ deal }: DealDetailProps) {
         setTimeout(() => {
           window.location.href = `/dashboard/memos/${data.memoId}`
         }, 1000)
+      } else if (response.status === 504) {
+        toast({
+          title: 'Timeout',
+          description: 'Memo generation is taking longer than expected. This can happen with large documents. Please try again in a few minutes.',
+          variant: 'destructive',
+        })
       } else {
         toast({
           title: 'Error',
@@ -111,10 +124,17 @@ export default function DealDetail({ deal }: DealDetailProps) {
           variant: 'destructive',
         })
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating memo:', error)
-      toast({
-        title: 'Error',
+      if (error.name === 'AbortError') {
+        toast({
+          title: 'Timeout',
+          description: 'The request took too long. Please try again.',
+          variant: 'destructive',
+        })
+      } else {
+        toast({
+          title: 'Error',
         description: 'Failed to generate memo',
         variant: 'destructive',
       })
@@ -491,7 +511,7 @@ export default function DealDetail({ deal }: DealDetailProps) {
                 {generatingMemo ? (
                   <>
                     <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                    Generating...
+                    Generating (5-8 min)...
                   </>
                 ) : (
                   <>

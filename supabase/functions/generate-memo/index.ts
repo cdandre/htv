@@ -70,10 +70,11 @@ serve(async (req) => {
                       analysisResult.executive_summary?.match(/(?:website|domain):\s*([^\s,]+\.(?:com|ai|io|co|net|org))/i)?.[1] ||
                       ''
     
+    // Convert analysis to text for searching
+    const analysisText = JSON.stringify(analysisResult)
+    
     // If not found, search in the full analysis text for domain patterns
     if (!extractedWebsite) {
-      const analysisText = JSON.stringify(analysisResult)
-      
       // First try to find domains that match the company name
       const companyNameLower = deal.company.name.toLowerCase().replace(/\s+/g, '')
       const domainPattern = new RegExp(`(${companyNameLower}\\.[a-zA-Z]{2,6})`, 'i')

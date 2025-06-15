@@ -84,19 +84,24 @@ serve(async (req) => {
         extractedWebsite = companyDomainMatch[1]
         console.log('Found domain matching company name:', extractedWebsite)
       } else {
-        // Fallback to any domain pattern, but prefer .ai domains for AI companies
+        // Look for all domains in the analysis
         const allDomains = analysisText.match(/([a-zA-Z0-9-]+\.(?:ai|com|io|co|net|org))(?=[^a-zA-Z0-9-]|$)/g) || []
         
         // Filter out common domains that are not the company
         const filteredDomains = allDomains.filter(d => 
-          !['example.com', 'gmail.com', 'linkedin.com', 'twitter.com'].includes(d.toLowerCase())
+          !['example.com', 'gmail.com', 'linkedin.com', 'twitter.com', 'facebook.com', 'google.com'].includes(d.toLowerCase())
         )
         
-        // Prefer .ai domains for tech companies
-        const aiDomain = filteredDomains.find(d => d.endsWith('.ai'))
+        // For companies like AdBuy, prioritize .ai domains over .com
+        const aiDomain = filteredDomains.find(d => d.endsWith('.ai') && d.toLowerCase().includes(companyNameLower.substring(0, 3)))
+        const matchingDomain = filteredDomains.find(d => d.toLowerCase().includes(companyNameLower.substring(0, 3)))
+        
         if (aiDomain) {
           extractedWebsite = aiDomain
-          console.log('Found .ai domain:', extractedWebsite)
+          console.log('Found .ai domain matching company name:', extractedWebsite)
+        } else if (matchingDomain) {
+          extractedWebsite = matchingDomain
+          console.log('Found domain partially matching company name:', extractedWebsite)
         } else if (filteredDomains.length > 0) {
           extractedWebsite = filteredDomains[0]
           console.log('Found domain:', extractedWebsite)
@@ -475,6 +480,8 @@ ${companyDomain ? `
 - The company domain is ${companyDomain} (verified from uploaded documents)
 - DO NOT confuse with similar domains (e.g., adbuy.com vs adbuy.ai are DIFFERENT companies)
 - ALWAYS include "${companyDomain}" in your searches about THIS company
+- If you find references to a different domain (like ${companyDomain.replace('.ai', '.com')} or ${companyDomain.replace('.com', '.ai')}), that is a DIFFERENT company
+- ONLY use information about ${deal.company.name} at ${companyDomain}
 ` : '⚠️ Domain not found in documents - you must search to find the correct company website'}
 
 DOCUMENT ANALYSIS (extracted from uploaded pitch deck):
@@ -513,14 +520,14 @@ CRITICAL: You MUST quote directly from the uploaded documents throughout the mem
 
 STEP 2 - PERFORM WEB SEARCHES TO VERIFY AND SUPPLEMENT:
 Now perform web searches to supplement the document insights:
-1. Search: "${deal.company.name} ${companyDomain} company overview"
-2. Search: "${deal.company.name} ${companyDomain} funding history"  
-3. Search: "${deal.company.name} ${companyDomain} team founders"
-4. Search: "${companyDomain} website about team product"
-5. Search: "${deal.company.name} competitors" (then verify they compete with ${companyDomain})
-6. Search: "${deal.company.name} real estate proptech housing"
-7. Search: "proptech ${deal.stage} investments 2024 2025"
-8. Search: "${deal.company.name} homebuilders brokers property managers customers"
+1. Search: "${deal.company.name} site:${companyDomain}" (verify this is the right company)
+2. Search: "${deal.company.name} ${companyDomain} company overview -${companyDomain.includes('.ai') ? companyDomain.replace('.ai', '.com') : companyDomain.replace('.com', '.ai')}"
+3. Search: "${deal.company.name} ${companyDomain} funding history"  
+4. Search: "${deal.company.name} ${companyDomain} team founders"
+5. Search: "site:${companyDomain} about team product"
+6. Search: "${deal.company.name} competitors" (then verify they compete with ${companyDomain} NOT other domains)
+7. Search: "${deal.company.name} ${companyDomain} real estate proptech housing"
+8. Search: "${deal.company.name} ${companyDomain} customers clients"
 
 CRITICAL WEB SEARCH REQUIREMENTS:
 - Base your understanding on the DOCUMENT ANALYSIS first
@@ -566,8 +573,8 @@ ${JSON.stringify(latestAnalysis.result, null, 2)}
 The above analysis was generated from documents uploaded about ${deal.company.name}. This is your PRIMARY source of company information.
 
 REQUIRED WEB SEARCHES - YOU MUST PERFORM ALL OF THESE:
-1. Company verification: "${deal.company.name} ${companyDomain}" to ensure you have the RIGHT company
-2. Company website check: "site:${companyDomain}" or "${companyDomain} about team"
+1. Company verification: "site:${companyDomain} ${deal.company.name}" to ensure you have the RIGHT company website
+2. Exclude wrong domains: "${deal.company.name} ${companyDomain} -${companyDomain.includes('.ai') ? companyDomain.replace('.ai', '.com') : companyDomain.replace('.com', '.ai')}"
 3. Recent news: "${deal.company.name} ${companyDomain} news 2024 2025"
 4. Funding history: "${deal.company.name} ${companyDomain} funding investment"
 5. Team backgrounds: Search for specific founder names from the analysis with company domain
@@ -607,6 +614,8 @@ YOU MUST USE file_search BEFORE WRITING EACH SECTION!` : ''}
 Write a comprehensive investment memo (4-6 pages, approximately 2,500-3,500 words) following this EXACT markdown structure. Use ## for main sections and ### for subsections. Quote from uploaded documents and cite web sources:
 
 # Investment Memo: ${deal.company.name}
+
+${companyDomain ? `**⚠️ CRITICAL: This memo is about ${deal.company.name} (${companyDomain}). Do NOT include information about similarly named companies with different domains.**` : ''}
 
 ## Executive Summary
 Write 3-4 paragraphs covering:

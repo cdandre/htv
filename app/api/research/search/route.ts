@@ -46,8 +46,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model: 'gpt-4.1',
         tools: [{ 
-          type: 'web_search_preview',
-          search_context_size: 'medium'
+          type: 'web_search_preview'
         }],
         input: `Search for the latest news, articles, and insights about: ${searchPrompt}
       
@@ -72,15 +71,17 @@ Format the response as a clear list of findings.`,
     }
 
     const data = await response.json()
+    console.log('[Research Search] Response structure:', JSON.stringify(data, null, 2))
 
     // Extract the results from the response
     let searchResults: any[] = []
     let rawText = ''
     let annotations: any[] = []
 
-    if (Array.isArray(data.output)) {
-      for (const item of data.output) {
-        if (item.type === 'message' && item.content) {
+    // The response is an array with web_search_call and message items
+    if (Array.isArray(data)) {
+      for (const item of data) {
+        if (item.type === 'message' && item.status === 'completed' && item.content) {
           for (const content of item.content) {
             if (content.type === 'output_text') {
               rawText = content.text || ''
@@ -89,14 +90,26 @@ Format the response as a clear list of findings.`,
           }
         }
       }
-    } else if (typeof data.output === 'string') {
-      rawText = data.output
     } else if (data.output_text) {
       // Handle direct output_text format
       rawText = data.output_text
+    } else if (typeof data === 'string') {
+      rawText = data
     }
 
     console.log(`[Research Search] Found ${annotations.length} URL citations`)
+    console.log(`[Research Search] Raw text length: ${rawText.length}`)
+
+    // If no text was extracted, return empty results
+    if (!rawText) {
+      console.log('[Research Search] No text content found in response')
+      return NextResponse.json({
+        results: [],
+        query,
+        searchType,
+        timestamp: new Date().toISOString()
+      })
+    }
 
     // Parse the raw text into structured results
     const lines = rawText.split('\n').filter(line => line.trim())

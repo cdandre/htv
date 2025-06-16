@@ -28,7 +28,14 @@ serve(async (req) => {
     // Initialize Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!
-    const openaiKey = Deno.env.get('OPENAI_API_KEY')!
+    const openaiKey = Deno.env.get('OPENAI_API_KEY')
+    
+    if (!openaiKey) {
+      console.error('[Research Search] OPENAI_API_KEY is not set')
+      throw new Error('OpenAI API key is not configured')
+    }
+    
+    console.log('[Research Search] OpenAI key exists:', !!openaiKey, 'Key starts with:', openaiKey.substring(0, 7))
     
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } }
@@ -59,18 +66,15 @@ serve(async (req) => {
     console.log(`[Research Search] Query: "${query}", Type: ${searchType}, Enhanced: "${searchPrompt}"`)
 
     // Use the OpenAI Responses API with web_search tool
-    const response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4.1',
-        tools: [{ 
-          type: 'web_search_preview'
-        }],
-        input: `Search for the latest news, articles, and insights about: ${searchPrompt}
+    console.log('[Research Search] Calling OpenAI Responses API...')
+    
+    const requestBody = {
+      model: 'gpt-4.1',
+      tools: [{ 
+        type: 'web_search_preview'
+      }],
+      tool_choice: { type: 'web_search_preview' }, // Force use of web search
+      input: `Search for the latest news, articles, and insights about: ${searchPrompt}
       
 Focus on:
 - Recent venture capital investments and funding rounds
@@ -81,28 +85,55 @@ Focus on:
 
 Return the most relevant and recent results with clear titles, sources, dates, and brief summaries.
 Format the response as a clear list of findings.`,
-        max_output_tokens: 4000,
-        store: true
-      })
+      max_output_tokens: 4000,
+      store: true
+    }
+    
+    console.log('[Research Search] Request body:', JSON.stringify(requestBody, null, 2))
+    
+    const response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody)
     })
 
+    console.log('[Research Search] Response status:', response.status)
+    console.log('[Research Search] Response headers:', Object.fromEntries(response.headers.entries()))
+
     if (!response.ok) {
-      const errorData = await response.json()
-      console.error('[Research Search] OpenAI API error:', errorData)
-      throw new Error(errorData.error?.message || 'Failed to search')
+      const errorText = await response.text()
+      console.error('[Research Search] OpenAI API error response:', errorText)
+      
+      let errorData
+      try {
+        errorData = JSON.parse(errorText)
+      } catch {
+        errorData = { error: { message: errorText } }
+      }
+      
+      throw new Error(errorData.error?.message || `API request failed with status ${response.status}`)
     }
 
     const data = await response.json()
     console.log('[Research Search] Full response:', JSON.stringify(data, null, 2))
     console.log('[Research Search] Response type:', Array.isArray(data) ? 'array' : typeof data)
+    console.log('[Research Search] Response keys:', Object.keys(data))
 
     // Extract the results from the response
     let searchResults: any[] = []
     let rawText = ''
     let annotations: any[] = []
 
-    // The response is an array with web_search_call and message items
-    if (Array.isArray(data)) {
+    // First check for direct output_text (SDK format)
+    if (data.output_text) {
+      console.log('[Research Search] Found output_text directly')
+      rawText = data.output_text
+    } 
+    // Then check for array format (documented format)
+    else if (Array.isArray(data)) {
       console.log('[Research Search] Processing array response with', data.length, 'items')
       for (const item of data) {
         console.log('[Research Search] Item type:', item.type, 'status:', item.status)
@@ -116,20 +147,16 @@ Format the response as a clear list of findings.`,
           }
         }
       }
-    } else if (data.output_text) {
-      // Handle direct output_text format
-      console.log('[Research Search] Found output_text directly')
-      rawText = data.output_text
-    } else if (typeof data === 'string') {
-      console.log('[Research Search] Response is string')
-      rawText = data
-    } else if (data.output) {
-      // Check for output property
+    } 
+    // Check for output property
+    else if (data.output) {
       console.log('[Research Search] Found output property, type:', typeof data.output)
       if (typeof data.output === 'string') {
         rawText = data.output
       } else if (Array.isArray(data.output)) {
+        console.log('[Research Search] Output is array with', data.output.length, 'items')
         for (const item of data.output) {
+          console.log('[Research Search] Output item type:', item.type)
           if (item.type === 'message' && item.content) {
             for (const content of item.content) {
               if (content.type === 'output_text') {
@@ -140,6 +167,11 @@ Format the response as a clear list of findings.`,
           }
         }
       }
+    }
+    // Direct string response
+    else if (typeof data === 'string') {
+      console.log('[Research Search] Response is string')
+      rawText = data
     }
 
     console.log(`[Research Search] Found ${annotations.length} URL citations`)

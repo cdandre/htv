@@ -14,13 +14,18 @@ Generate ONLY the Market Analysis section. Focus on:
 5. Market timing considerations
 
 Include inline citations [N] when referencing specific information.`,
-  userPromptTemplate: ({ dealData, analysisData }) => `Generate the Market Analysis section for ${dealData.company.name}.
+  userPromptTemplate: ({ dealData, analysisData }) => {
+    const analysis = analysisData.result || {}
+    const marketAnalysis = analysis.market_analysis || {}
+    
+    return `Generate the Market Analysis section.
 
-Industry: ${analysisData.result?.industry || 'Housing/PropTech'}
-Market Size: ${analysisData.result?.market_analysis?.tam || 'To be researched'}
-
-Analysis Data:
-${JSON.stringify(analysisData.result?.market_analysis || {}, null, 2)}
+INITIAL MARKET ASSESSMENT:
+- Market Size: ${marketAnalysis.size || 'To be researched'}
+- Growth Rate: ${marketAnalysis.growth_rate || 'To be researched'}
+- Key Trends: ${marketAnalysis.trends?.join(', ') || 'To be researched'}
+- Main Competitors: ${marketAnalysis.competitors?.join(', ') || 'To be researched'}`
+  }
 
 Provide:
 1. TAM, SAM, SOM analysis with data sources

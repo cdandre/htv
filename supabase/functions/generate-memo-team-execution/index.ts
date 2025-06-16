@@ -14,10 +14,17 @@ Generate ONLY the Team & Execution section. Focus on:
 5. Hiring plans and gaps
 
 Include inline citations [N] when referencing specific information.`,
-  userPromptTemplate: ({ dealData, analysisData }) => `Generate the Team & Execution section for ${dealData.company.name}.
+  userPromptTemplate: ({ dealData, analysisData }) => {
+    const analysis = analysisData.result || {}
+    const teamAssessment = analysis.team_assessment || {}
+    
+    return `Generate the Team & Execution section.
 
-Team Data:
-${JSON.stringify(analysisData.result?.team || {}, null, 2)}
+INITIAL TEAM ASSESSMENT:
+- Key Strengths: ${teamAssessment.strengths?.join(', ') || 'See analysis'}
+- Key Concerns: ${teamAssessment.concerns?.join(', ') || 'None identified'}
+- Background Verification: ${teamAssessment.background_verification || 'See documents'}`
+  }
 
 Evaluate:
 1. Founder profiles and relevant experience

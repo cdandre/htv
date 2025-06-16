@@ -14,10 +14,20 @@ Generate ONLY the Risks & Mitigation section. Provide a balanced assessment of:
 5. Regulatory and compliance risks
 
 Include inline citations [N] when referencing specific information.`,
-  userPromptTemplate: ({ dealData, analysisData }) => `Generate the Risks & Mitigation section for ${dealData.company.name}.
+  userPromptTemplate: ({ dealData, analysisData }) => {
+    const analysis = analysisData.result || {}
+    const risks = analysis.risks || []
+    
+    return `Generate the Risks & Mitigation section.
 
-Risk Assessment:
-${JSON.stringify(analysisData.result?.risks || {}, null, 2)}
+INITIAL RISK ASSESSMENT:
+${risks.map((risk, index) => `
+Risk ${index + 1}:
+- Category: ${risk.category}
+- Description: ${risk.description}
+- Mitigation: ${risk.mitigation}
+`).join('\n') || 'No specific risks identified in initial analysis'}`
+  }
 
 Provide honest assessment of:
 1. Primary market and competitive risks

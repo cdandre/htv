@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { generateMemoSection, SectionGeneratorConfig } from '../_shared/memo-section-base.ts'
+import { generateMemoSection, SectionGeneratorConfig, getBasicCompanyInfo } from '../_shared/memo-section-base.ts'
 
 const config: SectionGeneratorConfig = {
   sectionType: 'executive_summary',
@@ -12,15 +12,20 @@ Generate ONLY the Executive Summary section of an investment memo. This should b
 3. Primary recommendation with deal terms
 
 Use the provided deal data and analysis. Include inline citations [N] when referencing specific information from documents or web searches.`,
-  userPromptTemplate: ({ dealData, analysisData }) => `Generate the Executive Summary section for ${dealData.company.name}.
+  userPromptTemplate: ({ dealData, analysisData }) => {
+    const analysis = analysisData.result || {}
+    
+    return `Generate the Executive Summary section for ${dealData.company.name}.
 
-Company: ${dealData.company.name}
-Stage: ${dealData.stage}
-Funding Amount: $${dealData.funding_amount?.toLocaleString() || 'TBD'}
-Valuation: $${dealData.valuation?.toLocaleString() || 'TBD'}
+CONTEXT FROM INITIAL ANALYSIS:
+${analysis.executive_summary || 'Not available'}
 
-Analysis Summary:
-${JSON.stringify(analysisData.result?.executive_summary || analysisData.result || {}, null, 2)}
+KEY INSIGHTS FROM INITIAL ASSESSMENT:
+${analysis.investment_recommendation ? 
+  `- Recommendation: ${analysis.investment_recommendation.decision}
+- Rationale: ${analysis.investment_recommendation.rationale}` : 
+  '- See full analysis for recommendation'}`
+  }
 
 Focus on:
 - Clear articulation of what the company does

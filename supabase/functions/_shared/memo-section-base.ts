@@ -8,6 +8,40 @@ export interface SectionGeneratorConfig {
   maxTokens?: number
 }
 
+// Helper function to extract basic company information from analysis data
+export function getBasicCompanyInfo(dealData: any, analysisData: any): string {
+  const analysis = analysisData?.result || {}
+  const companyDetails = analysis.company_details || {}
+  const dealDetails = analysis.deal_details || {}
+  const scores = analysis.scores || {}
+  
+  return `
+BASIC COMPANY INFORMATION:
+- Company Name: ${companyDetails.name || dealData.company?.name || 'Not specified'}
+- Website: ${companyDetails.website || dealData.company?.website || 'Not provided'}
+- Location: ${companyDetails.location || dealData.company?.location || 'Not provided'}
+- Sector/Industry: ${companyDetails.sector || 'Not specified'}
+- Description: ${companyDetails.description || 'See documents'}
+- Founded: ${companyDetails.founded_date || 'Not disclosed'}
+
+DEAL INFORMATION:
+- Stage: ${dealDetails.stage || dealData.stage || 'Not specified'}
+- Round Size: ${dealDetails.round_size ? `$${dealDetails.round_size.toLocaleString()}` : 'Not disclosed'}
+- Valuation: ${dealDetails.valuation ? `$${dealDetails.valuation.toLocaleString()}` : 'Not disclosed'}
+- HTV Investment Range: ${dealDetails.check_size_min && dealDetails.check_size_max ? 
+    `$${dealDetails.check_size_min.toLocaleString()} - $${dealDetails.check_size_max.toLocaleString()}` : 
+    'To be determined'}
+
+ANALYSIS SCORES:
+- Team: ${scores.team || 'N/A'}/10
+- Market: ${scores.market || 'N/A'}/10
+- Product: ${scores.product || 'N/A'}/10
+- Thesis Fit: ${scores.thesis_fit || 'N/A'}/10
+
+INVESTMENT RECOMMENDATION: ${analysis.investment_recommendation?.decision || 'Pending analysis'}
+`
+}
+
 export async function generateMemoSection(
   req: Request,
   config: SectionGeneratorConfig
@@ -137,7 +171,13 @@ CRITICAL INSTRUCTIONS FOR COMPREHENSIVE ANALYSIS WITH WEB RESEARCH:
      * "Recent funding data suggests..." (for web research)
    - Provide specific citations for all claims and data points`
     
-    const userPrompt = documentPrecedenceInstructions + '\n\n' + config.systemPrompt + '\n\n' + config.userPromptTemplate({ dealData, analysisData })
+    // Always include basic company info at the beginning
+    const basicCompanyInfo = getBasicCompanyInfo(dealData, analysisData)
+    
+    const userPrompt = documentPrecedenceInstructions + '\n\n' + 
+                      basicCompanyInfo + '\n\n' + 
+                      config.systemPrompt + '\n\n' + 
+                      config.userPromptTemplate({ dealData, analysisData })
     
     console.log(`Generating ${config.sectionType} with tools:`, JSON.stringify(tools, null, 2))
     console.log(`Vector store ID: ${vectorStoreId || 'None'}`)

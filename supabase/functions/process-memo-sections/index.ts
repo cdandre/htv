@@ -43,64 +43,133 @@ serve(async (req) => {
     if (sectionsError || !sections) {
       throw new Error('Failed to fetch memo sections')
     }
-
-    // Process sections with controlled concurrency
-    const MAX_CONCURRENT = 2 // Process 2 sections at a time to avoid rate limits
-    let activePromises = []
     
-    for (const section of sections) {
-      // Skip if already completed or generating
-      if (section.status !== 'pending') {
-        continue
+    // Reset any sections that have been stuck in 'generating' for more than 5 minutes
+    const stuckThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+    const stuckSections = sections.filter(s => 
+      s.status === 'generating' && 
+      s.started_at && 
+      s.started_at < stuckThreshold
+    )
+    
+    if (stuckSections.length > 0) {
+      console.log(`Found ${stuckSections.length} stuck sections, resetting to pending...`)
+      for (const section of stuckSections) {
+        await supabaseService
+          .from('investment_memo_sections')
+          .update({
+            status: 'pending',
+            started_at: null,
+            error: 'Reset due to timeout'
+          })
+          .eq('id', section.id)
+        
+        // Update the local section object
+        section.status = 'pending'
+        section.started_at = null
       }
+    }
 
-      // Wait if we've reached max concurrent
-      if (activePromises.length >= MAX_CONCURRENT) {
-        await Promise.race(activePromises)
-        activePromises = activePromises.filter(p => p.isPending !== false)
-      }
-
-      // Start section generation
+    // Process sections with controlled concurrency and retry logic
+    const MAX_CONCURRENT = 2 // Process 2 sections at a time to avoid rate limits
+    const MAX_RETRIES = 3
+    const RETRY_DELAY = 5000 // 5 seconds
+    
+    // Helper function to process a section with retries
+    const processSection = async (section: any, retryCount = 0): Promise<boolean> => {
       const functionName = SECTION_FUNCTIONS[section.section_type]
       if (!functionName) {
         console.error(`No function found for section type: ${section.section_type}`)
-        continue
+        return false
       }
 
-      const promise = fetch(`${supabaseUrl}/functions/v1/${functionName}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': authHeader,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          memoId,
-          dealData,
-          analysisData,
-          vectorStoreId
+      try {
+        const response = await fetch(`${supabaseUrl}/functions/v1/${functionName}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': authHeader,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            memoId,
+            dealData,
+            analysisData,
+            vectorStoreId
+          })
         })
-      }).then(async (response) => {
+
         if (!response.ok) {
           const error = await response.text()
           console.error(`Error generating ${section.section_type}:`, error)
-        } else {
-          console.log(`Successfully generated ${section.section_type}`)
+          
+          // Retry if we haven't exceeded max retries
+          if (retryCount < MAX_RETRIES) {
+            console.log(`Retrying ${section.section_type} (attempt ${retryCount + 1}/${MAX_RETRIES})...`)
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
+            return processSection(section, retryCount + 1)
+          }
+          
+          // Mark as failed after max retries
+          await supabaseService
+            .from('investment_memo_sections')
+            .update({
+              status: 'failed',
+              error: `Failed after ${MAX_RETRIES} attempts: ${error}`,
+              completed_at: new Date().toISOString()
+            })
+            .eq('id', section.id)
+          
+          return false
         }
-        promise.isPending = false
-      }).catch(error => {
+
+        console.log(`Successfully generated ${section.section_type}`)
+        return true
+      } catch (error) {
         console.error(`Failed to call ${functionName}:`, error)
-        promise.isPending = false
-      })
-
-      promise.isPending = true
-      activePromises.push(promise)
-
-      // Small delay between starting sections
-      await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Retry on network errors
+        if (retryCount < MAX_RETRIES) {
+          console.log(`Retrying ${section.section_type} after error (attempt ${retryCount + 1}/${MAX_RETRIES})...`)
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
+          return processSection(section, retryCount + 1)
+        }
+        
+        // Mark as failed after max retries
+        await supabaseService
+          .from('investment_memo_sections')
+          .update({
+            status: 'failed',
+            error_message: `Failed after ${MAX_RETRIES} attempts: ${error}`,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', section.id)
+        
+        return false
+      }
     }
-
-    // Wait for all remaining sections to complete
-    await Promise.allSettled(activePromises)
+    
+    // Process sections with proper concurrency control
+    const pendingSections = sections.filter(s => s.status === 'pending')
+    const results = []
+    
+    for (let i = 0; i < pendingSections.length; i += MAX_CONCURRENT) {
+      const batch = pendingSections.slice(i, i + MAX_CONCURRENT)
+      const batchPromises = batch.map(section => processSection(section))
+      
+      const batchResults = await Promise.allSettled(batchPromises)
+      results.push(...batchResults)
+      
+      // Small delay between batches to avoid rate limits
+      if (i + MAX_CONCURRENT < pendingSections.length) {
+        await new Promise(resolve => setTimeout(resolve, 2000))
+      }
+    }
+    
+    // Check if any sections failed
+    const failedCount = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value)).length
+    if (failedCount > 0) {
+      console.error(`${failedCount} sections failed to generate`)
+    }
 
     // Check if all sections are complete and update memo status
     const { data: updatedSections } = await supabaseService

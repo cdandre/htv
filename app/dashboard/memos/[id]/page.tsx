@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Download, ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { MemoStyles } from '@/components/memo-styles'
 
 export default function MemoDetailPage({
   params,
@@ -137,19 +138,16 @@ export default function MemoDetailPage({
           onComplete={() => fetchMemo()}
         />
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>{memo.title}</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Generated on {new Date(memo.created_at).toLocaleDateString()} for {memo.deal.company.name}
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="prose max-w-none">
-              <ReactMarkdown>{memo.content}</ReactMarkdown>
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          <MemoStyles />
+          <Card className="shadow-lg">
+            <CardContent className="p-8 md:p-12">
+              <div className="memo-content">
+                <ReactMarkdown>{memo.content}</ReactMarkdown>
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   )

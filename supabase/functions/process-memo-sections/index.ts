@@ -112,6 +112,19 @@ serve(async (req) => {
     const completedCount = updatedSections?.filter(s => s.status === 'completed').length || 0
 
     if (allComplete) {
+      // Get memo data for header
+      const { data: memoData } = await supabaseService
+        .from('investment_memos')
+        .select(`
+          *,
+          deal:deals(
+            *,
+            company:companies(*)
+          )
+        `)
+        .eq('id', memoId)
+        .single()
+      
       // Aggregate all sections into final memo content
       const { data: finalSections } = await supabaseService
         .from('investment_memo_sections')
@@ -119,24 +132,63 @@ serve(async (req) => {
         .eq('memo_id', memoId)
         .order('section_order')
 
-      const fullContent = finalSections?.map(s => {
-        // Add section title
-        let sectionText = `## ${getSectionTitle(s.section_type)}\n\n`
+      // Add header to the memo
+      let fullContent = `# Investment Memo - ${memoData?.deal?.company?.name || 'Company'}\n\n`
+      
+      // Add key details box
+      fullContent += `> **Date:** ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}  \n`
+      fullContent += `> **Stage:** ${memoData?.deal?.stage || 'N/A'}  \n`
+      fullContent += `> **Requested Amount:** ${memoData?.deal?.funding_amount ? `$${memoData.deal.funding_amount.toLocaleString()}` : 'TBD'}  \n`
+      fullContent += `> **Valuation:** ${memoData?.deal?.valuation ? `$${memoData.deal.valuation.toLocaleString()}` : 'TBD'}  \n`
+      fullContent += `> **HTV Allocation:** ${memoData?.deal?.check_size_max ? `$${memoData.deal.check_size_max.toLocaleString()}` : 'TBD'}\n\n`
+      
+      fullContent += `---\n\n`
+      
+      // Add table of contents
+      fullContent += `## Table of Contents\n\n`
+      finalSections?.forEach((s, index) => {
+        fullContent += `${index + 1}. [${getSectionTitle(s.section_type)}](#${s.section_type.replace(/_/g, '-')})\n`
+      })
+      fullContent += `\n---\n\n`
+      
+      // Process each section
+      const processedSections = finalSections?.map(s => {
+        // Add section title with proper formatting and anchor
+        const sectionId = s.section_type.replace(/_/g, '-')
+        let sectionText = `<a id="${sectionId}"></a>\n\n## ${getSectionTitle(s.section_type)}\n\n`
         
         // Process the content to ensure proper formatting
         let content = s.content || ''
         
-        // Ensure proper paragraph spacing
-        content = content.replace(/\n\n/g, '\n\n')
+        // Remove duplicate section titles if they exist at the start
+        const titleRegex = new RegExp(`^${getSectionTitle(s.section_type)}\\s*\\n+`, 'i')
+        content = content.replace(titleRegex, '')
         
-        // Convert citation references to markdown links
-        // Look for patterns like [1], [2], etc. and make them clickable
-        content = content.replace(/\[(\d+)\]/g, '[[^$1^]](#citation-$1)')
+        // Format bullet points properly
+        content = content.replace(/^(-|\d+\.)\s+/gm, '\n$1 ')
+        content = content.replace(/\n\n+(-|\d+\.)\s+/g, '\n\n$1 ')
+        
+        // Format sub-sections (lines ending with colon)
+        content = content.replace(/^([A-Z][^:\n]+:)$/gm, '\n**$1**')
+        content = content.replace(/\n\n([A-Z][^:\n]+:)$/gm, '\n\n**$1**')
+        
+        // Convert citation references to superscript format
+        content = content.replace(/\[(\d+)\]/g, '<sup>[$1]</sup>')
+        content = content.replace(/\[\^(\d+)\^\]/g, '<sup>[$1]</sup>')
+        
+        // Ensure proper paragraph spacing
+        content = content.replace(/\n{3,}/g, '\n\n')
+        
+        // Add emphasis to key metrics when they appear
+        content = content.replace(/\$(\d+(?:,\d{3})*(?:\.\d+)?[MBK]?)/g, '**$$$1**')
+        content = content.replace(/(\d+(?:\.\d+)?%)/g, '**$1**')
         
         sectionText += content
         
         return sectionText
       }).join('\n\n---\n\n') || ''
+      
+      fullContent += processedSections
       
       // Add a citations section at the end
       const citationsSection = `\n\n---\n\n## Citations\n\n*Note: Citations are embedded inline throughout the memo as [N] references. These citations come from web searches and document analysis performed during memo generation.*`

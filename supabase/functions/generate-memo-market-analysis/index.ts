@@ -25,35 +25,7 @@ INITIAL MARKET ASSESSMENT:
 - Growth Rate: ${marketAnalysis.growth_rate || 'To be researched'}
 - Key Trends: ${marketAnalysis.trends?.join(', ') || 'To be researched'}
 - Main Competitors: ${marketAnalysis.competitors?.join(', ') || 'To be researched'}`
-  }
-
-Provide:
-1. TAM, SAM, SOM analysis with data sources
-2. Market growth projections and key trends
-3. Industry dynamics and key success factors
-4. Competitive landscape and positioning
-5. Why the timing is right for this solution
-
-IMPORTANT: 
-- The company's pitch deck and supporting documents are already available in your vector store
-- Use file_search FIRST to check if the company provides specific TAM/SAM/SOM figures in their documents
-- If the pitch deck states market sizes, use those as the baseline but ENRICH with web research
-- ACTIVELY USE web_search_preview to find:
-  * Recent market research reports and industry analyses
-  * Competitor funding rounds and market valuations
-  * Industry growth projections from multiple sources
-  * Regulatory changes affecting the market
-  * Technology adoption trends and customer behavior shifts
-  * Geographic market variations and expansion opportunities
-- Create a COMPREHENSIVE market analysis by combining:
-  * Company's view of the market (from documents)
-  * Independent market research (from web)
-  * Competitive dynamics and recent market movements
-  * Multiple perspectives on market size and growth
-- If company doesn't provide market sizing, use web research extensively
-- Always distinguish between company claims and independent research
-- Include specific numbers and cite all sources with [N] references
-- Build a rich, multi-faceted view of the market opportunity`,
+  },
   maxTokens: 2500
 }
 

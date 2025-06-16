@@ -283,19 +283,6 @@ export default function QuickDealCard({ onSuccess }: QuickDealCardProps) {
               )}
             </Button>
             
-            {/* Alternative Action */}
-            <p className="text-xs text-center text-muted-foreground">
-              Need more options?{' '}
-              <Button
-                variant="link"
-                size="sm"
-                className="p-0 h-auto font-normal"
-                onClick={() => router.push('/dashboard/deals/new')}
-                disabled={loading}
-              >
-                Use full form
-              </Button>
-            </p>
           </div>
         </CardContent>
       </div>

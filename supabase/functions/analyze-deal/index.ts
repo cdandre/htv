@@ -212,9 +212,9 @@ Location: ${deal.company.location || 'Unknown'}
 
 ${uploadedFiles.length > 0 ? `I have uploaded ${uploadedFiles.length} document(s) for your analysis.` : 'No documents were provided.'}
 
-Please analyze all provided information and documents thoroughly.
+Please analyze all provided information and documents thoroughly. Extract specific details from the documents, particularly from pitch decks and investment memos.
 
-Provide a comprehensive investment analysis as a JSON object with the following structure:`
+Provide a comprehensive investment analysis as a JSON object with the following structure. For company_details and deal_details, extract actual values from the documents - do not make up information:`
     })
     
     // Add uploaded files to the input
@@ -229,6 +229,23 @@ Provide a comprehensive investment analysis as a JSON object with the following 
     inputContent[0].text += `
 {
   "executive_summary": "High-level overview of the investment opportunity",
+  "company_details": {
+    "name": "Official company name from documents",
+    "website": "Company website URL",
+    "location": "Company headquarters location",
+    "founded_date": "YYYY-MM-DD or null if not found",
+    "description": "Company description/mission",
+    "linkedin_url": "Company LinkedIn URL if found",
+    "crunchbase_url": "Company Crunchbase URL if found",
+    "sector": "Primary sector/industry"
+  },
+  "deal_details": {
+    "round_size": "Total funding round size in dollars (number only)",
+    "valuation": "Pre-money or post-money valuation in dollars (number only)",
+    "check_size_min": "Minimum investment amount requested from HTV (number only)",
+    "check_size_max": "Maximum investment amount available to HTV (number only)",
+    "stage": "Funding stage (pre-seed, seed, series-a, etc.)"
+  },
   "scores": {
     "team": <0-10>,
     "market": <0-10>,
@@ -275,19 +292,28 @@ Provide a comprehensive investment analysis as a JSON object with the following 
     try {
       console.log('Creating analysis with OpenAI Responses API...')
       
-      // Build the complete prompt
-      let fullPrompt = inputContent[0].text
-      
-      // The Responses API expects a simple string input for basic use
-      const requestBody = {
+      // Build the request body for Responses API with file_search
+      const requestBody: any = {
         model: 'gpt-4.1',
-        input: fullPrompt,
+        input: inputContent,
         text: {
           format: {
             type: 'json_object'
           }
         },
         temperature: 0.7
+      }
+      
+      // Add tools configuration if we have a vector store
+      if (vectorStoreId) {
+        requestBody.tools = [
+          {
+            type: 'file_search',
+            file_search: {
+              vector_store_ids: [vectorStoreId]
+            }
+          }
+        ]
       }
       
       const apiResponse = await fetch('https://api.openai.com/v1/responses', {
@@ -362,20 +388,78 @@ Provide a comprehensive investment analysis as a JSON object with the following 
       throw new Error(`Failed to store analysis: ${analysisError.message}`)
     }
 
-    // Update deal scores
+    // Update deal scores and details
+    const dealUpdateData: any = {
+      thesis_fit_score: analysisData.scores.thesis_fit,
+      market_score: analysisData.scores.market,
+      team_score: analysisData.scores.team,
+      product_score: analysisData.scores.product,
+    }
+    
+    // Add deal details if extracted
+    if (analysisData.deal_details) {
+      if (analysisData.deal_details.round_size) {
+        dealUpdateData.round_size = parseFloat(analysisData.deal_details.round_size)
+      }
+      if (analysisData.deal_details.valuation) {
+        dealUpdateData.valuation = parseFloat(analysisData.deal_details.valuation)
+      }
+      if (analysisData.deal_details.check_size_min) {
+        dealUpdateData.check_size_min = parseFloat(analysisData.deal_details.check_size_min)
+      }
+      if (analysisData.deal_details.check_size_max) {
+        dealUpdateData.check_size_max = parseFloat(analysisData.deal_details.check_size_max)
+      }
+    }
+    
     const { error: updateError } = await supabaseService
       .from('deals')
-      .update({
-        thesis_fit_score: analysisData.scores.thesis_fit,
-        market_score: analysisData.scores.market,
-        team_score: analysisData.scores.team,
-        product_score: analysisData.scores.product,
-      })
+      .update(dealUpdateData)
       .eq('id', dealId)
 
-      if (updateError) {
-        console.error('Failed to update deal scores:', updateError)
+    if (updateError) {
+      console.error('Failed to update deal scores:', updateError)
+    }
+    
+    // Update company details if extracted
+    if (analysisData.company_details && deal.company_id) {
+      const companyUpdateData: any = {}
+      
+      if (analysisData.company_details.name && analysisData.company_details.name !== deal.company.name) {
+        companyUpdateData.name = analysisData.company_details.name
       }
+      if (analysisData.company_details.website) {
+        companyUpdateData.website = analysisData.company_details.website
+      }
+      if (analysisData.company_details.location) {
+        companyUpdateData.location = analysisData.company_details.location
+      }
+      if (analysisData.company_details.founded_date) {
+        companyUpdateData.founded_date = analysisData.company_details.founded_date
+      }
+      if (analysisData.company_details.description) {
+        companyUpdateData.description = analysisData.company_details.description
+      }
+      if (analysisData.company_details.linkedin_url) {
+        companyUpdateData.linkedin_url = analysisData.company_details.linkedin_url
+      }
+      if (analysisData.company_details.crunchbase_url) {
+        companyUpdateData.crunchbase_url = analysisData.company_details.crunchbase_url
+      }
+      
+      if (Object.keys(companyUpdateData).length > 0) {
+        const { error: companyUpdateError } = await supabaseService
+          .from('companies')
+          .update(companyUpdateData)
+          .eq('id', deal.company_id)
+        
+        if (companyUpdateError) {
+          console.error('Failed to update company details:', companyUpdateError)
+        } else {
+          console.log('Updated company details with extracted information')
+        }
+      }
+    }
 
       return new Response(
         JSON.stringify({ success: true, analysis }),

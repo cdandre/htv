@@ -6,8 +6,7 @@ import DealPipeline from '@/components/deal-pipeline'
 import QuickDealCard from '@/components/quick-deal-card'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Plus, Filter, Download, Zap, X } from 'lucide-react'
-import Link from 'next/link'
+import { Zap, X } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 
 interface Deal {
@@ -93,20 +92,6 @@ export default function DealsPage() {
             </p>
           </div>
           <div className="flex items-center gap-3 mt-6 sm:mt-0">
-            <Button variant="outline" size="default" className="border-gray-300 dark:border-gray-700">
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <Button variant="outline" size="default" className="border-gray-300 dark:border-gray-700">
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-            <Link href="/dashboard/deals/new">
-              <Button variant="outline" size="default" className="border-gray-300 dark:border-gray-700">
-                <Plus className="mr-2 h-4 w-4" />
-                Full Form
-              </Button>
-            </Link>
             <Button 
               size="default" 
               className="btn-primary"
@@ -136,32 +121,6 @@ export default function DealsPage() {
           </Card>
         </div>
       )}
-      
-      {/* Stats Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="text-2xl font-bold">{deals.length}</div>
-          <p className="text-sm text-muted-foreground">Total Deals</p>
-        </Card>
-        <Card className="p-4">
-          <div className="text-2xl font-bold">
-            {deals.filter(d => d.documents && d.documents.length > 0).length}
-          </div>
-          <p className="text-sm text-muted-foreground">With Documents</p>
-        </Card>
-        <Card className="p-4">
-          <div className="text-2xl font-bold">
-            {deals.filter(d => d.deal_analyses && d.deal_analyses.length > 0).length}
-          </div>
-          <p className="text-sm text-muted-foreground">Analyzed</p>
-        </Card>
-        <Card className="p-4">
-          <div className="text-2xl font-bold">
-            {deals.filter(d => d.stage === 'closed').length}
-          </div>
-          <p className="text-sm text-muted-foreground">Closed</p>
-        </Card>
-      </div>
       
       {/* Deal Pipeline Component */}
       {loading ? (

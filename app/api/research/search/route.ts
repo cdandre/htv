@@ -64,9 +64,9 @@ Format the response as a clear list of findings.`,
     })
 
     // Extract the results from the response
-    let searchResults = []
+    let searchResults: any[] = []
     let rawText = ''
-    let annotations = []
+    let annotations: any[] = []
 
     if (Array.isArray(response.output)) {
       for (const item of response.output) {

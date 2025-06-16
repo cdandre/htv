@@ -2,11 +2,24 @@
 
 import { useState } from 'react'
 import { Database } from '@/types/database'
-import { ChevronRight, Building2, User, DollarSign, Calendar, TrendingUp, Users, Globe, FileText, Brain } from 'lucide-react'
+import { ChevronRight, Building2, User, DollarSign, Calendar, TrendingUp, Users, Globe, FileText, Brain, Trash2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/ui/use-toast'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 type Deal = Database['public']['Tables']['deals']['Row'] & {
   company: Database['public']['Tables']['companies']['Row']
@@ -18,6 +31,7 @@ type Deal = Database['public']['Tables']['deals']['Row'] & {
 
 interface DealPipelineProps {
   deals: any[] // Accept any deal shape for flexibility
+  onDealDeleted?: () => void // Callback to refresh deals after deletion
 }
 
 const stages = [
@@ -30,9 +44,13 @@ const stages = [
   { id: 'closed', name: 'Closed', color: 'bg-black', borderColor: 'border-black', textColor: 'text-white' },
 ] as const
 
-export default function DealPipeline({ deals }: DealPipelineProps) {
+export default function DealPipeline({ deals, onDealDeleted }: DealPipelineProps) {
   const [selectedStage, setSelectedStage] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [deletingDeal, setDeletingDeal] = useState<Deal | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const { toast } = useToast()
+  const supabase = createClient()
 
   const dealsByStage = stages.reduce((acc, stage) => {
     acc[stage.id] = deals.filter(deal => deal.stage === stage.id)
@@ -62,6 +80,40 @@ export default function DealPipeline({ deals }: DealPipelineProps) {
     if (score >= 8) return 'bg-gray-900 dark:bg-gray-100'
     if (score >= 6) return 'bg-gray-600 dark:bg-gray-400'
     return 'bg-gray-400 dark:bg-gray-600'
+  }
+
+  const handleDeleteDeal = async () => {
+    if (!deletingDeal) return
+    
+    setIsDeleting(true)
+    try {
+      const { error } = await supabase
+        .from('deals')
+        .delete()
+        .eq('id', deletingDeal.id)
+      
+      if (error) throw error
+      
+      toast({
+        title: 'Deal deleted',
+        description: `${deletingDeal.company.name} has been removed from your pipeline.`,
+      })
+      
+      // Call the refresh callback if provided
+      if (onDealDeleted) {
+        onDealDeleted()
+      }
+    } catch (error) {
+      console.error('Error deleting deal:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to delete the deal. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsDeleting(false)
+      setDeletingDeal(null)
+    }
   }
 
   return (
@@ -206,6 +258,19 @@ export default function DealPipeline({ deals }: DealPipelineProps) {
                                 Analyzed
                               </Badge>
                             )}
+                            {/* Delete Button */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setDeletingDeal(deal)
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                             <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
                           </div>
                         </div>
@@ -334,6 +399,29 @@ export default function DealPipeline({ deals }: DealPipelineProps) {
           </div>
         </div>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingDeal} onOpenChange={() => setDeletingDeal(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Deal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the deal for {deletingDeal?.company.name}? 
+              This action cannot be undone and will remove all associated data including documents and analyses.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteDeal}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

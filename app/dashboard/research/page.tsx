@@ -100,11 +100,11 @@ export default function ResearchPage() {
   }
 
   const toggleFavorite = async (item: ResearchResult) => {
-    const isFavorited = favorites.some(f => f.url === item.url)
+    const isFavorited = favorites.some(f => f.title === item.title)
     
     if (isFavorited) {
       // Remove from favorites
-      const favorite = favorites.find(f => f.url === item.url)
+      const favorite = favorites.find(f => f.title === item.title)
       if (!favorite) return
 
       try {
@@ -129,7 +129,7 @@ export default function ResearchPage() {
       }
     } else {
       // Add to favorites
-      setSavingFavorite(item.url || item.title)
+      setSavingFavorite(item.title)
       
       try {
         const response = await fetch('/api/research/favorites', {
@@ -176,8 +176,8 @@ export default function ResearchPage() {
   }
 
   const ResultCard = ({ item, isFavorite = false }: { item: ResearchResult | Favorite, isFavorite?: boolean }) => {
-    const isSaved = favorites.some(f => f.url === item.url)
-    const isSaving = savingFavorite === (item.url || item.title)
+    const isSaved = favorites.some(f => f.title === item.title)
+    const isSaving = savingFavorite === item.title
     
     return (
       <Card className="hover:shadow-lg transition-shadow">

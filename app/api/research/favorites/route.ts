@@ -57,9 +57,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { title, url, snippet, source, published_date, tags, metadata } = body
 
-    if (!title || !url) {
+    if (!title) {
       return NextResponse.json(
-        { error: 'Title and URL are required' },
+        { error: 'Title is required' },
         { status: 400 }
       )
     }

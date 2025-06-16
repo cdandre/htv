@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS public.research_favorites (
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
-  url TEXT NOT NULL,
+  url TEXT,
   snippet TEXT,
   source TEXT,
   published_date TIMESTAMPTZ,
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.research_favorites (
   metadata JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(organization_id, user_id, url)
+  UNIQUE(organization_id, user_id, title)
 );
 
 -- Create indexes

@@ -18,7 +18,7 @@ Be decisive and specific.`,
     const analysis = analysisData.result || {}
     const scores = analysis.scores || {}
     const dealDetails = analysis.deal_details || {}
-    const avgScore = (scores.team + scores.market + scores.product + scores.thesis_fit) / 4 || 0
+    const avgScore = ((scores.team || 0) + (scores.market || 0) + (scores.product || 0) + (scores.thesis_fit || 0)) / 4
     
     return `Generate the Recommendation section for ${dealData.company.name}.
 

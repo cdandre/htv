@@ -68,6 +68,8 @@ export async function generateMemoSection(
     vectorStoreId = body.vectorStoreId
     const authHeader = req.headers.get('Authorization')!
     
+    console.log(`[${config.sectionType}] Starting generation for memo ${memoId}`)
+    
     // Initialize Supabase clients
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -100,7 +102,9 @@ export async function generateMemoSection(
       })
 
     if (statusError) {
-      console.error('Error updating section status:', statusError)
+      console.error(`[${config.sectionType}] Error updating section status:`, statusError)
+    } else {
+      console.log(`[${config.sectionType}] Updated status to 'generating'`)
     }
 
     // Build tools array - prioritize file_search if we have documents
@@ -270,7 +274,10 @@ CRITICAL INSTRUCTIONS FOR COMPREHENSIVE ANALYSIS WITH WEB RESEARCH:
       .eq('section_type', config.sectionType)
 
     if (updateError) {
+      console.error(`[${config.sectionType}] Error updating section to completed:`, updateError)
       throw updateError
+    } else {
+      console.log(`[${config.sectionType}] Successfully completed and saved to database`)
     }
 
     // Update memo progress

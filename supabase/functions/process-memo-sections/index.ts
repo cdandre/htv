@@ -141,7 +141,7 @@ serve(async (req) => {
           .from('investment_memo_sections')
           .update({
             status: 'failed',
-            error_message: `Failed after ${MAX_RETRIES} attempts: ${error}`,
+            error: `Failed after ${MAX_RETRIES} attempts: ${error}`,
             completed_at: new Date().toISOString()
           })
           .eq('id', section.id)
@@ -155,6 +155,10 @@ serve(async (req) => {
     console.log(`Found ${pendingSections.length} pending sections to process:`, 
       pendingSections.map(s => ({ type: s.section_type, order: s.section_order }))
     )
+    
+    // Specifically log if Recommendation section is in pending list
+    const hasRecommendation = pendingSections.some(s => s.section_type === 'recommendation')
+    console.log(`Recommendation section in pending list: ${hasRecommendation}`)
     
     const results = []
     
@@ -185,7 +189,7 @@ serve(async (req) => {
     // Double-check for any sections still pending (shouldn't happen but just in case)
     const { data: finalCheck } = await supabaseService
       .from('investment_memo_sections')
-      .select('section_type, status')
+      .select('*')  // Need all fields, not just section_type and status
       .eq('memo_id', memoId)
       .eq('status', 'pending')
     

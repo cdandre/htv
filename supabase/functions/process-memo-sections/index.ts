@@ -71,7 +71,7 @@ serve(async (req) => {
     }
 
     // Process sections with controlled concurrency and retry logic
-    const MAX_CONCURRENT = 3 // Process 3 sections at a time (increased from 2)
+    const MAX_CONCURRENT = 5 // Process 5 sections at a time
     const MAX_RETRIES = 3
     const RETRY_DELAY = 5000 // 5 seconds
     

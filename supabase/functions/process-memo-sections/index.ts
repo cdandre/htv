@@ -205,20 +205,45 @@ serve(async (req) => {
       }
     }
 
-    // Add a small delay to ensure all database writes have completed
-    console.log('Waiting 3 seconds to ensure all sections have saved...')
-    await new Promise(resolve => setTimeout(resolve, 3000))
+    // Poll for completion with a timeout
+    console.log('Waiting for all sections to complete...')
+    const maxWaitTime = 120000 // 2 minutes max wait
+    const pollInterval = 5000 // Check every 5 seconds
+    const startTime = Date.now()
     
-    // Check if all sections are complete and update memo status
-    const { data: updatedSections } = await supabaseService
-      .from('investment_memo_sections')
-      .select('status')
-      .eq('memo_id', memoId)
+    let allComplete = false
+    let completedCount = 0
+    let updatedSections: any[] = []
+    
+    while (Date.now() - startTime < maxWaitTime) {
+      const { data: sections } = await supabaseService
+        .from('investment_memo_sections')
+        .select('status, section_type')
+        .eq('memo_id', memoId)
+      
+      updatedSections = sections || []
+      allComplete = updatedSections.every(s => s.status === 'completed' || s.status === 'failed')
+      completedCount = updatedSections.filter(s => s.status === 'completed').length
+      
+      console.log(`Status check: ${completedCount}/10 completed, ${updatedSections.filter(s => s.status === 'generating').length} generating`)
+      
+      if (allComplete) {
+        console.log('All sections have finished processing')
+        break
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, pollInterval))
+    }
+    
+    if (!allComplete) {
+      console.error('Timeout waiting for sections to complete. Current statuses:', 
+        updatedSections.map(s => ({ type: s.section_type, status: s.status }))
+      )
+    }
 
-    const allComplete = updatedSections?.every(s => s.status === 'completed') || false
-    const completedCount = updatedSections?.filter(s => s.status === 'completed').length || 0
-
-    if (allComplete) {
+    // Proceed if all sections are done or we have at least 9 completed
+    if (allComplete && completedCount >= 9) {
+      console.log('Assembling final memo content...')
       // Get memo data for header
       const { data: memoData } = await supabaseService
         .from('investment_memos')
@@ -376,6 +401,19 @@ serve(async (req) => {
         console.error('Error updating final memo content:', memoUpdateError)
         throw memoUpdateError
       }
+      
+      console.log(`Successfully assembled and saved memo ${memoId}`)
+    } else {
+      // Not enough sections completed - mark memo as failed
+      console.error(`Memo generation incomplete: only ${completedCount}/10 sections completed`)
+      
+      await supabaseService
+        .from('investment_memos')
+        .update({
+          generation_status: 'failed',
+          sections_completed: completedCount
+        })
+        .eq('id', memoId)
     }
 
     return new Response(

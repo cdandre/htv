@@ -26,7 +26,7 @@ Evaluate:
 4. Past execution and achievements
 5. Organizational culture and values
 
-IMPORTANT: Use file_search to find team information from pitch decks and web_search_preview for LinkedIn profiles.`,
+IMPORTANT: The company's pitch deck and supporting documents are already available in your vector store. Use file_search to extract team bios, backgrounds, and organizational information from these uploaded documents. Additionally, use web_search_preview for LinkedIn profiles and additional background information. Do NOT ask for documents to be uploaded - they are already available.`,
   maxTokens: 2000
 }
 

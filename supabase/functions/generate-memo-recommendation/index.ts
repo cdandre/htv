@@ -31,7 +31,9 @@ Provide:
 4. Recommended next steps and timeline
 5. Strategic considerations for HTV
 
-Be direct and actionable in your recommendation.`,
+Be direct and actionable in your recommendation.
+
+IMPORTANT: The company's pitch deck and supporting documents are already available in your vector store. If needed, use file_search to reference specific data points from these uploaded documents to support your recommendation. Do NOT ask for documents to be uploaded - they are already available.`,
   maxTokens: 1500
 }
 

@@ -31,7 +31,9 @@ Articulate:
 2. Expected return profile and exit scenarios
 3. Strategic value and portfolio synergies
 4. Key milestones and value inflection points
-5. HTV's unique ability to add value`,
+5. HTV's unique ability to add value
+
+IMPORTANT: The company's pitch deck and supporting documents are already available in your vector store. Use file_search to extract specific evidence supporting the investment rationale from these uploaded documents. Do NOT ask for documents to be uploaded - they are already available.`,
   maxTokens: 2000
 }
 

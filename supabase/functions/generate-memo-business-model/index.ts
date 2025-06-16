@@ -29,7 +29,7 @@ Analyze:
 4. Customer acquisition costs and LTV
 5. Financial projections and key assumptions
 
-IMPORTANT: Use file_search to extract specific financial data from pitch decks.`,
+IMPORTANT: The company's pitch deck and supporting documents are already available in your vector store. Use file_search to extract specific financial data, metrics, unit economics, and revenue projections from these uploaded documents. Do NOT ask for documents to be uploaded - they are already available.`,
   maxTokens: 2000
 }
 

@@ -28,7 +28,7 @@ Provide honest assessment of:
 
 For each risk, suggest potential mitigation strategies.
 
-IMPORTANT: Be balanced but honest about risks. Use file_search and web_search_preview to research industry-specific risks.`,
+IMPORTANT: Be balanced but honest about risks. The company's pitch deck and supporting documents are already available in your vector store. Use file_search to extract risk mitigation strategies and challenges acknowledged by the company from these uploaded documents. Additionally, use web_search_preview to research industry-specific risks. Do NOT ask for documents to be uploaded - they are already available.`,
   maxTokens: 2000
 }
 

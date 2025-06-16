@@ -30,10 +30,12 @@ Provide:
 5. Why the timing is right for this solution
 
 IMPORTANT: 
-- Use file_search FIRST to extract market data from the pitch deck (TAM, SAM, SOM, growth rates)
+- The company's pitch deck and supporting documents are already available in your vector store
+- Use file_search FIRST to extract market data from these uploaded documents (TAM, SAM, SOM, growth rates)
 - Then use web_search_preview to validate and supplement with current market research
 - Ensure all company references use the correct domain (e.g., adbuy.ai not adbuy.com)
-- Include specific numbers and cite all sources with [N] references`,
+- Include specific numbers and cite all sources with [N] references
+- Do NOT ask for documents to be uploaded - they are already available`,
   maxTokens: 2500
 }
 

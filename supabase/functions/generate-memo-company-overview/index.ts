@@ -34,10 +34,12 @@ Provide:
 5. Key metrics, traction, and growth indicators
 
 IMPORTANT: 
-- ALWAYS use file_search to extract specific information from the uploaded pitch deck and documents
+- The company's pitch deck and supporting documents are already available in your vector store
+- ALWAYS use file_search to extract specific information from these uploaded documents
 - Include actual metrics, traction data, and growth numbers from the pitch deck with citations
 - Be specific about the company's correct domain and naming (e.g., adbuy.ai not adbuy.com)
-- Look for and cite: revenue figures, user numbers, growth rates, customer names, partnership details`,
+- Look for and cite: revenue figures, user numbers, growth rates, customer names, partnership details
+- Do NOT ask for documents to be uploaded - they are already available`,
   maxTokens: 2500
 }
 

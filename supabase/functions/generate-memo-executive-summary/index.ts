@@ -29,9 +29,11 @@ Focus on:
 - Key metrics and traction points
 
 IMPORTANT: 
-- ALWAYS use file_search to reference specific information from uploaded pitch decks and documents
+- The company's pitch deck and supporting documents are already available in your vector store
+- ALWAYS use file_search to reference specific information from these uploaded documents
 - When referencing the company, ensure you use the correct domain (e.g., adbuy.ai not adbuy.com)
-- Include specific metrics and data points from the pitch deck with citations`,
+- Include specific metrics and data points from the pitch deck with citations
+- Do NOT ask for documents to be uploaded - they are already available`,
   maxTokens: 1500
 }
 

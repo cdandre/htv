@@ -29,7 +29,7 @@ Cover:
 4. Product differentiation and moat
 5. Development roadmap and future features
 
-IMPORTANT: Use file_search to find specific technical details from pitch decks.`,
+IMPORTANT: The company's pitch deck and supporting documents are already available in your vector store. Use file_search to extract specific technical details, architecture diagrams, feature descriptions, and roadmap information from these uploaded documents. Do NOT ask for documents to be uploaded - they are already available.`,
   maxTokens: 2000
 }
 

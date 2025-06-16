@@ -119,15 +119,29 @@ export async function generateMemoSection(
         if (msg.content && Array.isArray(msg.content)) {
           for (const contentItem of msg.content) {
             if (contentItem.type === 'output_text' && contentItem.text) {
-              sectionContent += contentItem.text + '\n\n'
+              // Extract the text and ensure it's properly formatted
+              let text = contentItem.text
+              
+              // Remove any duplicate section titles that might be in the content
+              const sectionTitlePattern = new RegExp(`^${config.sectionType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}\\s*\\n+`, 'i')
+              text = text.replace(sectionTitlePattern, '')
+              
+              sectionContent += text
             }
           }
         }
       }
     }
     
-    // Clean up any trailing newlines
+    // Clean up formatting
     sectionContent = sectionContent.trim()
+    
+    // Ensure proper paragraph spacing (but don't double up)
+    sectionContent = sectionContent.replace(/\n{3,}/g, '\n\n')
+    
+    // Ensure lists have proper spacing
+    sectionContent = sectionContent.replace(/(\n)(-|\d+\.) /g, '\n\n$2 ')
+    sectionContent = sectionContent.replace(/(\n\n\n)(-|\d+\.) /g, '\n\n$2 ')
     
     console.log(`Generated ${config.sectionType} section with ${sectionContent.length} characters`)
 

@@ -119,12 +119,34 @@ serve(async (req) => {
         .eq('memo_id', memoId)
         .order('section_order')
 
-      const fullContent = finalSections?.map(s => `## ${getSectionTitle(s.section_type)}\n\n${s.content || ''}`).join('\n\n') || ''
+      const fullContent = finalSections?.map(s => {
+        // Add section title
+        let sectionText = `## ${getSectionTitle(s.section_type)}\n\n`
+        
+        // Process the content to ensure proper formatting
+        let content = s.content || ''
+        
+        // Ensure proper paragraph spacing
+        content = content.replace(/\n\n/g, '\n\n')
+        
+        // Convert citation references to markdown links
+        // Look for patterns like [1], [2], etc. and make them clickable
+        content = content.replace(/\[(\d+)\]/g, '[[^$1^]](#citation-$1)')
+        
+        sectionText += content
+        
+        return sectionText
+      }).join('\n\n---\n\n') || ''
+      
+      // Add a citations section at the end
+      const citationsSection = `\n\n---\n\n## Citations\n\n*Note: Citations are embedded inline throughout the memo as [N] references. These citations come from web searches and document analysis performed during memo generation.*`
+      
+      const finalMemoContent = fullContent + citationsSection
 
       await supabaseService
         .from('investment_memos')
         .update({
-          content: fullContent,
+          content: finalMemoContent,
           generation_status: 'completed',
           sections_completed: completedCount
         })

@@ -69,21 +69,28 @@ export async function generateMemoSection(
       console.error('Error updating section status:', statusError)
     }
 
-    // Build tools array
-    const tools = [{
-      type: 'web_search_preview',
-      search_context_size: 'medium'
-    }]
+    // Build tools array - prioritize file_search if we have documents
+    const tools = []
     
     if (vectorStoreId) {
+      // Add file_search first to prioritize document analysis
       tools.push({
         type: 'file_search',
         vector_store_ids: [vectorStoreId]
       })
     }
+    
+    // Always add web search for market data and competitive analysis
+    tools.push({
+      type: 'web_search_preview',
+      search_context_size: 'medium'
+    })
 
     // Generate section content
     const userPrompt = config.systemPrompt + '\n\n' + config.userPromptTemplate({ dealData, analysisData })
+    
+    console.log(`Generating ${config.sectionType} with tools:`, JSON.stringify(tools, null, 2))
+    console.log(`Vector store ID: ${vectorStoreId || 'None'}`)
     
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
@@ -110,17 +117,28 @@ export async function generateMemoSection(
     
     // Extract the actual text content from the Responses API format
     let sectionContent = ''
+    let fileCitations = []
+    
     if (typeof data.output === 'string') {
       sectionContent = data.output
     } else if (Array.isArray(data.output)) {
-      // Handle array format - extract text from message content
+      // Handle array format - extract text from message content and file citations
       const messages = data.output.filter((item: any) => item.type === 'message' && item.status === 'completed')
       for (const msg of messages) {
         if (msg.content && Array.isArray(msg.content)) {
           for (const contentItem of msg.content) {
-            if (contentItem.type === 'output_text' && contentItem.text) {
+            if (contentItem.type === 'output_text') {
               // Extract the text and ensure it's properly formatted
-              let text = contentItem.text
+              let text = contentItem.text || ''
+              
+              // Extract file citations if present
+              if (contentItem.annotations && Array.isArray(contentItem.annotations)) {
+                for (const annotation of contentItem.annotations) {
+                  if (annotation.type === 'file_citation' && annotation.filename) {
+                    fileCitations.push(annotation.filename)
+                  }
+                }
+              }
               
               // Remove any duplicate section titles that might be in the content
               const sectionTitlePattern = new RegExp(`^${config.sectionType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}\\s*\\n+`, 'i')
@@ -131,6 +149,11 @@ export async function generateMemoSection(
           }
         }
       }
+    }
+    
+    // Log file citations found
+    if (fileCitations.length > 0) {
+      console.log(`Found file citations in ${config.sectionType}:`, [...new Set(fileCitations)])
     }
     
     // Clean up formatting

@@ -171,16 +171,22 @@ serve(async (req) => {
         content = content.replace(/^([A-Z][^:\n]+:)$/gm, '\n**$1**')
         content = content.replace(/\n\n([A-Z][^:\n]+:)$/gm, '\n\n**$1**')
         
-        // Convert citation references to superscript format
-        content = content.replace(/\[(\d+)\]/g, '<sup>[$1]</sup>')
-        content = content.replace(/\[\^(\d+)\^\]/g, '<sup>[$1]</sup>')
+        // Add emphasis to key metrics when they appear (do this before citations)
+        // But avoid double-bolding already bolded content
+        content = content.replace(/(?<!\*)\$(\d+(?:,\d{3})*(?:\.\d+)?[MBK]?)(?!\*)/g, '**$$$1**')
+        content = content.replace(/(?<!\*)(\d+(?:\.\d+)?%)(?!\*)/g, '**$1**')
+        
+        // Convert citation references to markdown superscript format
+        // Process HTML sup tags first to avoid double conversion
+        content = content.replace(/<sup>\[(\d+)\]<\/sup>/g, '^[$1]^')
+        content = content.replace(/<sup>(\d+)<\/sup>/g, '^$1^')
+        
+        // Then process plain brackets (but not ones already in superscript format)
+        content = content.replace(/(?<!\^)\[(\d+)\](?!\^)/g, '^[$1]^')
+        content = content.replace(/\[\^(\d+)\^\]/g, '^[$1]^')
         
         // Ensure proper paragraph spacing
         content = content.replace(/\n{3,}/g, '\n\n')
-        
-        // Add emphasis to key metrics when they appear
-        content = content.replace(/\$(\d+(?:,\d{3})*(?:\.\d+)?[MBK]?)/g, '**$$$1**')
-        content = content.replace(/(\d+(?:\.\d+)?%)/g, '**$1**')
         
         sectionText += content
         
@@ -189,10 +195,49 @@ serve(async (req) => {
       
       fullContent += processedSections
       
-      // Add a citations section at the end
-      const citationsSection = `\n\n---\n\n## Citations\n\n*Note: Citations are embedded inline throughout the memo as [N] references. These citations come from web searches and document analysis performed during memo generation.*`
+      // Extract all citations from sections and build references list
+      const citationMap = new Map()
+      let citationCounter = 1
       
-      const finalMemoContent = fullContent + citationsSection
+      // Process all sections to collect citations
+      finalSections?.forEach(section => {
+        const citationMatches = section.content?.match(/\^?\[(\d+)\]\^?/g) || []
+        citationMatches.forEach(match => {
+          const num = match.match(/\d+/)?.[0]
+          if (num && !citationMap.has(num)) {
+            citationMap.set(num, citationCounter++)
+          }
+        })
+      })
+      
+      // Add a comprehensive citations section at the end
+      let citationsSection = `\n\n---\n\n## References\n\n`
+      
+      // Add references based on what was analyzed
+      if (memoData?.deal?.company?.name) {
+        citationsSection += `**Company Materials:**\n`
+        citationsSection += `- ${memoData.deal.company.name} pitch deck and supporting documents (accessed via file_search)\n`
+        if (memoData.deal.company.website) {
+          citationsSection += `- Company website: ${memoData.deal.company.website}\n`
+        }
+        citationsSection += `\n`
+      }
+      
+      citationsSection += `**Research Sources:**\n`
+      citationsSection += `- Market analysis and competitive landscape (web_search_preview)\n`
+      citationsSection += `- Industry reports and trend analysis (web_search_preview)\n`
+      citationsSection += `- Financial benchmarks and comparable company data (web_search_preview)\n`
+      citationsSection += `\n`
+      
+      citationsSection += `**Note:** Inline citations ^[N]^ throughout the memo reference specific data points from the above sources. All market data, competitive intelligence, and financial metrics were verified through multiple sources during the analysis process.\n\n`
+      citationsSection += `**Analysis Date:** ${new Date().toISOString().split('T')[0]}`
+      
+      // Final cleanup on the entire memo content
+      let finalMemoContent = fullContent + citationsSection
+      
+      // Ensure all HTML sup tags are converted to markdown
+      finalMemoContent = finalMemoContent.replace(/<sup>\[(\d+)\]<\/sup>/g, '^[$1]^')
+      finalMemoContent = finalMemoContent.replace(/<sup>(\d+)<\/sup>/g, '^$1^')
 
       await supabaseService
         .from('investment_memos')

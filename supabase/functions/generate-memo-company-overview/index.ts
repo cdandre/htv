@@ -34,9 +34,10 @@ Provide:
 5. Key metrics, traction, and growth indicators
 
 IMPORTANT: 
-- Use file_search to find specific information from pitch decks
-- Reference actual metrics and data points with citations
-- Be specific about the company's domain (e.g., adbuy.ai not adbuy.com)`,
+- ALWAYS use file_search to extract specific information from the uploaded pitch deck and documents
+- Include actual metrics, traction data, and growth numbers from the pitch deck with citations
+- Be specific about the company's correct domain and naming (e.g., adbuy.ai not adbuy.com)
+- Look for and cite: revenue figures, user numbers, growth rates, customer names, partnership details`,
   maxTokens: 2500
 }
 

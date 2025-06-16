@@ -28,7 +28,10 @@ Focus on:
 - Investment recommendation and rationale
 - Key metrics and traction points
 
-IMPORTANT: Use file_search to reference specific information from uploaded pitch decks and documents.`,
+IMPORTANT: 
+- ALWAYS use file_search to reference specific information from uploaded pitch decks and documents
+- When referencing the company, ensure you use the correct domain (e.g., adbuy.ai not adbuy.com)
+- Include specific metrics and data points from the pitch deck with citations`,
   maxTokens: 1500
 }
 

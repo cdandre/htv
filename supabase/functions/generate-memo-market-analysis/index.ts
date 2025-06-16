@@ -29,7 +29,11 @@ Provide:
 4. Competitive landscape and positioning
 5. Why the timing is right for this solution
 
-IMPORTANT: Use both file_search and web_search_preview to find current market data and statistics.`,
+IMPORTANT: 
+- Use file_search FIRST to extract market data from the pitch deck (TAM, SAM, SOM, growth rates)
+- Then use web_search_preview to validate and supplement with current market research
+- Ensure all company references use the correct domain (e.g., adbuy.ai not adbuy.com)
+- Include specific numbers and cite all sources with [N] references`,
   maxTokens: 2500
 }
 

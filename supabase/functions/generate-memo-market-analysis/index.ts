@@ -31,14 +31,24 @@ Provide:
 
 IMPORTANT: 
 - The company's pitch deck and supporting documents are already available in your vector store
-- Use file_search FIRST to extract market data from these uploaded documents (TAM, SAM, SOM, growth rates)
-- Document data takes precedence - if the pitch deck states a TAM, use that figure regardless of web research
-- Then use web_search_preview ONLY to supplement with industry context and competitive landscape
-- If market sizing is not in documents, you may use web research but clearly state "Based on industry research..." 
-- NEVER fabricate or guess market sizes - if not available, state "Market size not disclosed in provided documents"
-- Ensure all company references use the correct domain (e.g., adbuy.ai not adbuy.com)
+- Use file_search FIRST to check if the company provides specific TAM/SAM/SOM figures in their documents
+- If the pitch deck states market sizes, use those as the baseline but ENRICH with web research
+- ACTIVELY USE web_search_preview to find:
+  * Recent market research reports and industry analyses
+  * Competitor funding rounds and market valuations
+  * Industry growth projections from multiple sources
+  * Regulatory changes affecting the market
+  * Technology adoption trends and customer behavior shifts
+  * Geographic market variations and expansion opportunities
+- Create a COMPREHENSIVE market analysis by combining:
+  * Company's view of the market (from documents)
+  * Independent market research (from web)
+  * Competitive dynamics and recent market movements
+  * Multiple perspectives on market size and growth
+- If company doesn't provide market sizing, use web research extensively
+- Always distinguish between company claims and independent research
 - Include specific numbers and cite all sources with [N] references
-- Do NOT ask for documents to be uploaded - they are already available`,
+- Build a rich, multi-faceted view of the market opportunity`,
   maxTokens: 2500
 }
 

@@ -29,15 +29,27 @@ Provide honest assessment of:
 For each risk, suggest potential mitigation strategies.
 
 IMPORTANT: 
-- Be balanced but honest about risks
+- Be balanced but honest about risks - this section is critical for investment decisions
 - The company's pitch deck and supporting documents are already available in your vector store
-- Use file_search FIRST to identify risks and mitigation strategies acknowledged in documents
-- Company-acknowledged risks from documents should be presented first and given priority
-- Use web_search_preview for industry-wide risks and market dynamics only
-- NEVER fabricate specific risks about the company that aren't supported by evidence
-- If documents don't mention certain risks, you may note general industry risks but clarify the source
-- Be clear: "The pitch deck identifies..." vs "Industry analysis suggests..."
-- Do NOT ask for documents to be uploaded - they are already available`,
+- Use file_search FIRST to identify any risks acknowledged in company documents
+- THEN use web_search_preview EXTENSIVELY to research:
+  * Common failure patterns in this industry/business model
+  * Regulatory changes or compliance issues affecting the sector
+  * Competitive threats from incumbents or new entrants
+  * Technology risks and obsolescence patterns
+  * Market timing risks and adoption barriers
+  * Recent failures or pivots of similar companies
+  * Industry-specific operational challenges
+  * Economic sensitivity and market cycle risks
+- Build comprehensive risk assessment by combining:
+  * Company-acknowledged risks (from documents)
+  * Industry-wide risks and patterns (from web research)
+  * Competitive dynamics and market threats
+  * Regulatory and compliance landscape
+- Present both company-specific and industry risks
+- For each risk, research and suggest concrete mitigation strategies
+- Be transparent: "Company identifies..." vs "Industry research shows..."
+- Include specific examples and cite all sources with [N] references`,
   maxTokens: 2000
 }
 

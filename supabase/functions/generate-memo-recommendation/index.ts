@@ -35,16 +35,24 @@ Be direct and actionable in your recommendation.
 
 IMPORTANT: 
 - The company's pitch deck and supporting documents are already available in your vector store
-- Use file_search to reference specific data points from documents to support your recommendation
-- Base recommendations on actual data from documents, not assumptions
-- If recommending specific terms or conditions, tie them to document evidence
-- NEVER guess or fabricate:
-  * Specific valuation caps or discount rates
-  * Board seat requirements
-  * Pro-rata rights percentages
-  * Liquidation preferences
-- If deal terms aren't specified in documents, recommend "standard terms for stage"
-- Do NOT ask for documents to be uploaded - they are already available`,
+- Use file_search for company-specific data supporting the recommendation
+- Base initial recommendation on document evidence
+- THEN use web_search_preview to strengthen recommendation with:
+  * Market comparables and recent deal terms
+  * Standard terms for similar stage/sector deals
+  * Recent exits and returns in this space
+  * Competitive dynamics affecting urgency
+  * Co-investor quality and syndicate potential
+  * Market timing and momentum factors
+- Build recommendation by combining:
+  * Company performance data (from documents)
+  * Market benchmarks and deal comps (from web research)
+  * Industry best practices for terms
+  * Strategic timing considerations
+- Never fabricate specific company terms, but research market standards
+- If terms not in documents, use "market standard" with web-researched context
+- Support recommendation with both company data and market evidence
+- Include specific examples and cite all sources with [N] references`,
   maxTokens: 1500
 }
 

@@ -36,12 +36,24 @@ Explain:
 
 IMPORTANT: 
 - The company's pitch deck and supporting documents are already available in your vector store
-- Use file_search FIRST to understand the company's actual business model and market focus
-- Base thesis alignment on what the company actually does per their documents, not assumptions
-- NEVER force-fit a company into HTV's thesis if documents show otherwise
-- If the company's focus isn't clear from documents, state this rather than guessing
-- Be honest if thesis alignment is weak or unclear based on available information
-- Do NOT ask for documents to be uploaded - they are already available`,
+- Use file_search FIRST to understand company's actual business model from documents
+- Base initial thesis alignment on company's stated focus in their materials
+- THEN use web_search_preview to research:
+  * Market trends supporting this thesis area
+  * Recent investments in similar companies
+  * Industry reports on housing/proptech innovation
+  * Regulatory changes enabling new business models
+  * Consumer behavior shifts in housing/home tech
+  * Technology adoption curves in real estate
+  * Success stories and failures in this segment
+- Build thesis alignment case by combining:
+  * Company's actual business (from documents)
+  * Market dynamics supporting the thesis (from web research)
+  * Industry trends and timing factors
+  * Competitive landscape evolution
+- Be honest about alignment - don't force-fit if it's not there
+- Use web research to validate market timing and opportunity size
+- Include specific examples and cite all sources with [N] references`,
   maxTokens: 2000
 }
 

@@ -28,17 +28,25 @@ Evaluate:
 
 IMPORTANT: 
 - The company's pitch deck and supporting documents are already available in your vector store
-- Use file_search FIRST to extract team information from documents (bios, backgrounds, experience)
-- Information from pitch deck about team takes precedence over web search findings
-- You may use web_search_preview to supplement with public profiles (LinkedIn) but clearly indicate this
-- If team member details are not in documents, state "Additional details not provided in documents"
-- NEVER fabricate or guess about:
-  * Educational backgrounds or degrees
-  * Previous company names or roles
-  * Years of experience or dates
-  * Specific achievements or metrics
-- Be clear about source: "According to the pitch deck..." vs "Public profiles show..."
-- Do NOT ask for documents to be uploaded - they are already available`,
+- Use file_search FIRST for team info provided in company documents
+- Team facts from documents are authoritative (names, roles, company background)
+- THEN use web_search_preview EXTENSIVELY to research:
+  * LinkedIn profiles and professional backgrounds
+  * Previous startup experiences and exits
+  * Academic publications or patents
+  * Industry recognition and speaking engagements
+  * Previous companies' outcomes and performance
+  * Network connections and advisor relationships
+  * Domain expertise validation through public work
+- Build comprehensive team assessment by combining:
+  * Company-provided team information (from documents)
+  * Public professional profiles and achievements (from web)
+  * Industry reputation and track record
+  * Network quality and advisor credentials
+- Never fabricate specific facts, but do research public information
+- Distinguish: "Company materials show..." vs "Public profiles indicate..."
+- Validate domain expertise claims through web research
+- Include specific examples and cite all sources with [N] references`,
   maxTokens: 2000
 }
 

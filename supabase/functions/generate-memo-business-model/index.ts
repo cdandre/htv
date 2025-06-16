@@ -31,16 +31,25 @@ Analyze:
 
 IMPORTANT: 
 - The company's pitch deck and supporting documents are already available in your vector store
-- Use file_search FIRST to extract ALL financial data from documents (revenue, burn rate, runway, unit economics)
-- Financial metrics from documents are authoritative - NEVER estimate or calculate different figures
-- If specific financial metrics are not in documents, explicitly state "not disclosed" or "not provided"
-- NEVER guess, estimate, or fabricate financial figures like:
-  * Revenue/ARR/MRR numbers
-  * Burn rate or runway
-  * Customer acquisition costs (CAC) or lifetime value (LTV)
-  * Gross margins or unit economics
-- Web search should NOT be used for company-specific financials
-- Do NOT ask for documents to be uploaded - they are already available`,
+- Use file_search FIRST for ALL company financial data (revenue, burn, runway, metrics)
+- Company financial data from documents is authoritative - NEVER override
+- If financials not disclosed, state "not provided in documents"
+- THEN use web_search_preview EXTENSIVELY to research:
+  * Industry benchmarks for similar business models
+  * Typical unit economics in this sector
+  * Pricing strategies of competitors
+  * Customer acquisition costs across the industry
+  * Revenue multiples and growth rates for comparables
+  * Burn rates and capital efficiency benchmarks
+  * Path to profitability timelines for similar companies
+- Build comprehensive analysis by combining:
+  * Company's actual financials (from documents)
+  * Industry benchmarks and standards (from web research)
+  * Competitive pricing and business model comparisons
+  * Market best practices for unit economics
+- Never fabricate company-specific numbers, but do provide industry context
+- Clearly distinguish: "Company reports..." vs "Industry benchmarks show..."
+- Include specific comparisons and cite all sources with [N] references`,
   maxTokens: 2000
 }
 

@@ -35,13 +35,20 @@ Provide:
 
 IMPORTANT: 
 - The company's pitch deck and supporting documents are already available in your vector store
-- ALWAYS use file_search FIRST to extract specific information from these uploaded documents
-- Include actual metrics, traction data, and growth numbers from the pitch deck with citations
+- Use file_search FIRST for all company-specific facts (metrics, team, product details)
 - Be specific about the company's correct domain and naming (e.g., adbuy.ai not adbuy.com)
-- Look for and cite: revenue figures, user numbers, growth rates, customer names, partnership details
-- If specific metrics are not found in documents, state "not disclosed in provided documents" - NEVER guess or estimate
-- Trust document data over any conflicting web search results
-- Do NOT ask for documents to be uploaded - they are already available`,
+- Extract from documents: revenue, users, growth rates, customer names, partnerships
+- THEN use web_search_preview to ENRICH the overview with:
+  * Recent news about the company or founders
+  * Industry context for their solution
+  * Competitor comparisons and market positioning
+  * Technology trends relevant to their approach
+  * Customer reviews or case studies if publicly available
+  * Industry recognition, awards, or press coverage
+- If specific metrics are not in documents, state "not disclosed" - don't guess
+- Company facts from documents ALWAYS override any conflicting web info
+- Build a comprehensive picture by combining internal data with external context
+- Include specific numbers and cite all sources with [N] references`,
   maxTokens: 2500
 }
 

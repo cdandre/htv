@@ -31,17 +31,24 @@ Cover:
 
 IMPORTANT: 
 - The company's pitch deck and supporting documents are already available in your vector store
-- Use file_search FIRST to extract ALL product and technical information from documents
-- Product features and technical details from documents are authoritative
-- If technical specifications are not in documents, state "Technical details not provided in documents"
-- NEVER fabricate or guess about:
-  * Specific features or capabilities
-  * Technology stack components
-  * Performance metrics or benchmarks
-  * Integration partners or APIs
-  * Development timelines or roadmap dates
-- Web search should only supplement with general technology context, not company-specific details
-- Do NOT ask for documents to be uploaded - they are already available`,
+- Use file_search FIRST for company's specific product features and tech stack
+- Product details from documents are authoritative for what they currently have
+- THEN use web_search_preview to research:
+  * Technology trends and best practices in their stack
+  * Competitor product features and capabilities
+  * Industry standards and benchmarks
+  * Technology adoption curves and user preferences
+  * Integration ecosystem and partnership opportunities
+  * Emerging technologies that could enhance their product
+  * Developer community sentiment about their tech choices
+- Build comprehensive analysis by combining:
+  * Company's actual product capabilities (from documents)
+  * Industry technology landscape (from web research)
+  * Competitive feature comparisons
+  * Technology trends and future directions
+- If technical specs not in documents, state "not provided" but research industry norms
+- Never fabricate company-specific features, but do analyze technology potential
+- Include specific comparisons and cite all sources with [N] references`,
   maxTokens: 2000
 }
 

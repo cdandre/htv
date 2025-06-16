@@ -86,34 +86,56 @@ export async function generateMemoSection(
       search_context_size: 'medium'
     })
 
-    // Generate section content with enhanced instructions for document precedence
+    // Generate section content with enhanced instructions for comprehensive research
     const documentPrecedenceInstructions = `
-CRITICAL INSTRUCTIONS FOR DATA SOURCING AND ACCURACY:
+CRITICAL INSTRUCTIONS FOR COMPREHENSIVE ANALYSIS WITH WEB RESEARCH:
 
-1. DOCUMENT PRECEDENCE:
-   - ALWAYS prioritize information from uploaded documents (file_search) as the primary source of truth
-   - Uploaded documents include pitch decks, financials, and company-provided materials
-   - These documents contain the most accurate and up-to-date information about the company
-   - Web search results should ONLY be used for supplementary market context, industry trends, and competitive landscape
+1. RESEARCH APPROACH - COMBINE DOCUMENTS WITH EXTENSIVE WEB RESEARCH:
+   - Use uploaded documents (file_search) as the AUTHORITATIVE SOURCE for company-specific facts:
+     * Company domain, team names, specific metrics (revenue, users, growth rates)
+     * Product features, technical architecture, pricing
+     * Partnerships, customer names, investor details
+     * Any specific claims or data points made by the company
+   - ACTIVELY LEVERAGE web search (web_search_preview) to ENRICH the analysis with:
+     * Market size, growth trends, and industry dynamics
+     * Competitive landscape and competitor analysis
+     * Technology comparisons and industry best practices
+     * Regulatory environment and compliance considerations
+     * Investment trends and recent funding activity in the space
+     * Customer behavior patterns and market adoption trends
+     * Industry expert opinions and analysis
 
-2. DATA ACCURACY - NEVER GUESS OR FABRICATE:
-   - If specific data is not found in documents or web search, explicitly state it is "not disclosed", "not available", or "not provided in documents"
-   - NEVER make assumptions, estimates, or educated guesses about:
-     * Financial metrics (revenue, burn rate, runway, valuation)
-     * User/customer numbers or growth rates
-     * Specific dates, names, or partnerships
-     * Technical specifications or product features
-   - Always indicate the source of information with inline citations [N]
+2. WEB RESEARCH EXPECTATIONS:
+   - ALWAYS conduct comprehensive web research for market context
+   - Search for recent industry reports, market studies, and analyst coverage
+   - Look for competitor information, funding announcements, and market movements
+   - Research technology trends, emerging solutions, and innovation patterns
+   - Find regulatory updates, policy changes, and compliance requirements
+   - Identify industry challenges, pain points, and unmet needs
+   - The goal is a RICH, COMPREHENSIVE analysis that goes beyond just the pitch deck
 
-3. CONFLICT RESOLUTION:
-   - In case of conflicting information between documents and web search, ALWAYS use the data from uploaded documents
-   - If web search provides different information than documents, trust the documents
-   - Only mention discrepancies if they are significant and warrant investor attention
+3. DATA ACCURACY AND SOURCING:
+   - For company-specific facts: Use ONLY data from uploaded documents
+   - For market context: Actively search and cite credible web sources
+   - If company data is not in documents, state "not disclosed in provided documents"
+   - NEVER fabricate or guess specific company metrics
+   - Always indicate source with inline citations [N]
+   - Distinguish between document sources and web research sources
 
-4. TRANSPARENCY:
-   - Be explicit about what information comes from documents vs. web research
-   - Use phrases like "According to the pitch deck...", "The company's documents show...", "Web research indicates..."
-   - If relying on web search for context, clearly state "Based on industry research..." or "Market analysis suggests..."`
+4. CONFLICT RESOLUTION:
+   - Company-specific facts from documents ALWAYS override web search results
+   - If web search shows different company info than documents, trust the documents
+   - For market/industry data, use the most recent and credible sources
+   - Note significant discrepancies only if they impact investment decision
+
+5. TRANSPARENCY AND CITATIONS:
+   - Clearly distinguish document-sourced vs. web-researched information
+   - Use phrases like:
+     * "According to the company's pitch deck..." (for document info)
+     * "Industry research shows..." (for web findings)
+     * "Market analysis indicates..." (for web-based insights)
+     * "Recent funding data suggests..." (for web research)
+   - Provide specific citations for all claims and data points`
     
     const userPrompt = documentPrecedenceInstructions + '\n\n' + config.systemPrompt + '\n\n' + config.userPromptTemplate({ dealData, analysisData })
     

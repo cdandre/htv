@@ -35,16 +35,24 @@ Articulate:
 
 IMPORTANT: 
 - The company's pitch deck and supporting documents are already available in your vector store
-- Use file_search FIRST to extract evidence supporting investment rationale from documents
-- Base return projections on actual metrics from documents, not assumptions
-- If exit scenarios or comparables are in the pitch deck, use those figures
-- NEVER fabricate or guess:
-  * Return multiples or exit valuations
-  * Timeline to exit or liquidity
-  * Comparable company valuations
-  * Market share projections
-- If specific projections aren't in documents, state "Company has not provided exit projections"
-- Do NOT ask for documents to be uploaded - they are already available`,
+- Use file_search FIRST for company's stated projections and exit scenarios
+- THEN use web_search_preview EXTENSIVELY to research:
+  * Recent exits and acquisitions in this space
+  * Comparable company valuations and multiples
+  * Industry consolidation trends and strategic buyers
+  * Public company multiples for similar businesses
+  * Recent funding rounds and valuations for competitors
+  * Market dynamics driving M&A activity
+  * Historical returns in this sector
+- Build investment case by combining:
+  * Company's projections (if provided in documents)
+  * Market comparables and recent transactions (from web research)
+  * Industry valuation trends and exit activity
+  * Strategic buyer landscape and acquisition patterns
+- For return scenarios, use web research to find relevant benchmarks
+- Always distinguish between company projections and market-based analysis
+- If company hasn't provided projections, use industry data to inform scenarios
+- Include specific examples and cite all sources with [N] references`,
   maxTokens: 2000
 }
 

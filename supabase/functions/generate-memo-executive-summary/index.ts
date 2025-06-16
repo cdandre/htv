@@ -30,13 +30,22 @@ Focus on:
 
 IMPORTANT: 
 - The company's pitch deck and supporting documents are already available in your vector store
-- ALWAYS use file_search FIRST to extract key information from uploaded documents
-- All key metrics (revenue, users, growth) must come from documents - NEVER estimate
-- When referencing the company, ensure you use the correct domain (e.g., adbuy.ai not adbuy.com)
-- If critical metrics are not in documents, state "not disclosed" rather than guessing
-- Document data takes absolute precedence over any web search findings
-- Be explicit: "According to the pitch deck..." for document-sourced information
-- Do NOT ask for documents to be uploaded - they are already available`,
+- Use file_search FIRST for all company metrics and key facts from documents
+- Company metrics (revenue, users, growth) must come from documents - never estimate
+- Ensure correct company naming and domain (e.g., adbuy.ai not adbuy.com)
+- THEN use web_search_preview to add context:
+  * Recent news or funding announcements
+  * Market dynamics and timing factors
+  * Competitive landscape overview
+  * Industry momentum and trends
+- Executive summary should combine:
+  * Company facts and metrics (from documents)
+  * Market context and opportunity (from web research)
+  * Strategic positioning and timing
+- If metrics not disclosed, state clearly but provide market context
+- Distinguish: "Company reports..." vs "Market research indicates..."
+- Create a compelling narrative using both sources
+- Include specific data points and cite all sources with [N] references`,
   maxTokens: 1500
 }
 

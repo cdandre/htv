@@ -93,6 +93,7 @@ Format the response as a clear list of findings.`,
     }
 
     const data = await response.json()
+    console.log('[Research Search] Full response:', JSON.stringify(data, null, 2))
     console.log('[Research Search] Response type:', Array.isArray(data) ? 'array' : typeof data)
 
     // Extract the results from the response
@@ -102,9 +103,12 @@ Format the response as a clear list of findings.`,
 
     // The response is an array with web_search_call and message items
     if (Array.isArray(data)) {
+      console.log('[Research Search] Processing array response with', data.length, 'items')
       for (const item of data) {
+        console.log('[Research Search] Item type:', item.type, 'status:', item.status)
         if (item.type === 'message' && item.status === 'completed' && item.content) {
           for (const content of item.content) {
+            console.log('[Research Search] Content type:', content.type)
             if (content.type === 'output_text') {
               rawText = content.text || ''
               annotations = content.annotations || []
@@ -114,9 +118,28 @@ Format the response as a clear list of findings.`,
       }
     } else if (data.output_text) {
       // Handle direct output_text format
+      console.log('[Research Search] Found output_text directly')
       rawText = data.output_text
     } else if (typeof data === 'string') {
+      console.log('[Research Search] Response is string')
       rawText = data
+    } else if (data.output) {
+      // Check for output property
+      console.log('[Research Search] Found output property, type:', typeof data.output)
+      if (typeof data.output === 'string') {
+        rawText = data.output
+      } else if (Array.isArray(data.output)) {
+        for (const item of data.output) {
+          if (item.type === 'message' && item.content) {
+            for (const content of item.content) {
+              if (content.type === 'output_text') {
+                rawText = content.text || ''
+                annotations = content.annotations || []
+              }
+            }
+          }
+        }
+      }
     }
 
     console.log(`[Research Search] Found ${annotations.length} URL citations`)

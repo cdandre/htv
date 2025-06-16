@@ -323,14 +323,18 @@ Provide a comprehensive investment analysis as a JSON object with the following 
       try {
         let outputText = ''
         
-        // Based on the API documentation, the response format is:
-        // response.output[0].content[0].text
-        if (response.output && Array.isArray(response.output) && response.output.length > 0) {
-          const firstOutput = response.output[0]
-          if (firstOutput.content && Array.isArray(firstOutput.content) && firstOutput.content.length > 0) {
-            const firstContent = firstOutput.content[0]
-            if (firstContent.type === 'output_text' && firstContent.text) {
-              outputText = firstContent.text
+        // The response has multiple outputs - file_search_call and message
+        // We need the message output which contains the analysis
+        if (response.output && Array.isArray(response.output)) {
+          for (const output of response.output) {
+            if (output.type === 'message' && output.content && Array.isArray(output.content)) {
+              for (const content of output.content) {
+                if (content.type === 'output_text' && content.text) {
+                  outputText = content.text
+                  break
+                }
+              }
+              if (outputText) break
             }
           }
         }
@@ -344,6 +348,8 @@ Provide a comprehensive investment analysis as a JSON object with the following 
         // Parse the JSON from the response
         analysisData = JSON.parse(outputText)
         console.log('Parsed analysis data successfully')
+        console.log('Company details extracted:', analysisData.company_details)
+        console.log('Deal details extracted:', analysisData.deal_details)
       } catch (e) {
         console.error('Failed to parse analysis response:', e)
         throw new Error('Invalid analysis format received')

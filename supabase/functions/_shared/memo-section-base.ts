@@ -83,28 +83,20 @@ export async function generateMemoSection(
     }
 
     // Generate section content
-    const userPrompt = config.userPromptTemplate({ dealData, analysisData })
+    const userPrompt = config.systemPrompt + '\n\n' + config.userPromptTemplate({ dealData, analysisData })
     
-    const response = await fetch('https://api.openai.com/v1/beta/responses/generate', {
+    const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiKey}`,
         'Content-Type': 'application/json',
-        'X-Beta': 'responses'
       },
       body: JSON.stringify({
-        model: 'gpt-4-1106-preview',
-        messages: [
-          { role: 'system', content: config.systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
+        model: 'gpt-4.1',
+        input: userPrompt,
         tools,
-        max_tokens: config.maxTokens || 2000,
-        temperature: 0.7,
-        response_format: {
-          type: 'structured_response',
-          include_citations: true
-        }
+        max_output_tokens: config.maxTokens || 2000,
+        store: true
       })
     })
 
@@ -115,14 +107,10 @@ export async function generateMemoSection(
     }
 
     const data = await response.json()
-    let sectionContent = data.content || ''
+    let sectionContent = data.output || ''
 
-    // Process citations
-    if (data.citations && data.citations.length > 0) {
-      console.log(`Processing ${data.citations.length} citations for ${config.sectionType}`)
-      const processedContent = processResponseCitations(sectionContent, data.citations)
-      sectionContent = processedContent
-    }
+    // The Responses API returns the content with citations already embedded
+    console.log(`Generated ${config.sectionType} section with ${sectionContent.length} characters`)
 
     // Update section with content
     const { error: updateError } = await supabaseService
@@ -194,27 +182,3 @@ export async function generateMemoSection(
   }
 }
 
-function processResponseCitations(content: string, citations: any[]): string {
-  // Sort citations by start position in descending order
-  const sortedCitations = [...citations].sort((a, b) => b.start_index - a.start_index)
-  
-  let processedContent = content
-  
-  for (const citation of sortedCitations) {
-    const citationNumber = `[${citation.metadata.citation_number}]`
-    const startIndex = citation.start_index
-    const endIndex = citation.end_index
-    
-    // Check if citation already exists at this position
-    const textAfterPosition = processedContent.substring(endIndex)
-    if (!textAfterPosition.startsWith('[')) {
-      // Insert citation number after the cited text
-      processedContent = 
-        processedContent.substring(0, endIndex) + 
-        citationNumber + 
-        processedContent.substring(endIndex)
-    }
-  }
-  
-  return processedContent
-}

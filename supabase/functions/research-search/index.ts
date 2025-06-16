@@ -176,6 +176,9 @@ Format the response as a clear list of findings.`,
 
     console.log(`[Research Search] Found ${annotations.length} URL citations`)
     console.log(`[Research Search] Raw text length: ${rawText.length}`)
+    
+    // Log first 500 chars of text to see format
+    console.log('[Research Search] Text preview:', rawText.substring(0, 500))
 
     // If no text was extracted, return empty results
     if (!rawText) {
@@ -194,81 +197,115 @@ Format the response as a clear list of findings.`,
     }
 
     // Parse the raw text into structured results
-    const lines = rawText.split('\n').filter(line => line.trim())
+    const lines = rawText.split('\n')
     let currentResult: any = null
     let currentSection = ''
+    let inBulletPoint = false
 
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
       const trimmedLine = line.trim()
       
-      // Check if this is a section header
-      if (trimmedLine.match(/^(Recent|Latest|Key|Top|Notable)/i) || trimmedLine.endsWith(':')) {
-        currentSection = trimmedLine
+      // Skip empty lines
+      if (!trimmedLine) {
+        inBulletPoint = false
         continue
       }
-
-      // Check if this is a numbered or bulleted item
-      if (trimmedLine.match(/^[\d\-\*•]\./)) {
-        if (currentResult) {
+      
+      // Check if this is a section header (marked with **)
+      if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
+        currentSection = trimmedLine.replace(/\*\*/g, '')
+        inBulletPoint = false
+        continue
+      }
+      
+      // Check if this is a bullet point
+      if (trimmedLine.startsWith('- **') || trimmedLine.startsWith('- ')) {
+        // Save previous result if exists
+        if (currentResult && currentResult.snippet) {
           searchResults.push(currentResult)
         }
         
-        // Extract title from the line
-        const titleMatch = trimmedLine.match(/^[\d\-\*•]\.\s*\*?\*?(.+?)\*?\*?(?:\s*[-–—]\s*|$)/)
-        const title = titleMatch ? titleMatch[1].trim() : trimmedLine
+        // Extract the title from the bullet point
+        let title = ''
+        let remainingText = ''
+        
+        if (trimmedLine.startsWith('- **')) {
+          // Format: - **Title**: description
+          const match = trimmedLine.match(/^- \*\*(.+?)\*\*:?\s*(.*)/)
+          if (match) {
+            title = match[1]
+            remainingText = match[2]
+          }
+        } else {
+          // Format: - Title or description
+          title = trimmedLine.substring(2).trim()
+          // Check if the next line continues the description
+          if (i + 1 < lines.length && !lines[i + 1].trim().startsWith('-') && !lines[i + 1].trim().startsWith('**')) {
+            remainingText = lines[i + 1].trim()
+          }
+        }
         
         currentResult = {
-          title,
-          snippet: '',
+          title: title,
+          snippet: remainingText,
           source: currentSection,
           url: null,
           published_date: null,
           tags: []
         }
-      } else if (currentResult) {
-        // This is continuation of the current result
-        currentResult.snippet += (currentResult.snippet ? ' ' : '') + trimmedLine
-        
-        // Try to extract date
-        const dateMatch = trimmedLine.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b|\b\d{1,2}\/\d{1,2}\/\d{4}\b/)
-        if (dateMatch) {
-          currentResult.published_date = new Date(dateMatch[0]).toISOString()
-        }
-        
-        // Extract source if mentioned
-        const sourceMatch = trimmedLine.match(/\(([^)]+)\)$/)
-        if (sourceMatch) {
-          currentResult.source = sourceMatch[1]
-        }
+        inBulletPoint = true
+      } else if (inBulletPoint && currentResult && !trimmedLine.startsWith('**')) {
+        // This is a continuation of the current bullet point
+        currentResult.snippet += ' ' + trimmedLine
       }
     }
-
+    
     // Don't forget the last result
-    if (currentResult) {
+    if (currentResult && currentResult.snippet) {
       searchResults.push(currentResult)
     }
 
-    // Match annotations to results based on position in text
+    // Match annotations to results
+    console.log(`[Research Search] Matching ${annotations.length} annotations to ${searchResults.length} results`)
+    
     for (const annotation of annotations) {
       if (annotation.type === 'url_citation') {
-        // Find the result that contains this citation
+        // Find which result contains this citation based on the text position
         const citationText = rawText.substring(annotation.start_index, annotation.end_index)
+        
         for (const result of searchResults) {
-          if (result.snippet.includes(citationText) || result.title.includes(citationText)) {
+          const fullText = result.title + ' ' + result.snippet
+          if (fullText.includes(citationText.substring(0, 50))) { // Match first 50 chars
             result.url = annotation.url
-            if (annotation.title && !result.source) {
+            // Use the annotation title as source if we don't have one
+            if (!result.source && annotation.title) {
               result.source = annotation.title
             }
+            console.log(`[Research Search] Matched URL for: ${result.title.substring(0, 50)}...`)
             break
           }
         }
       }
     }
 
-    // Add tags based on content
+
+    // Add tags and extract dates
     searchResults = searchResults.map(result => {
       const tags = []
       const text = (result.title + ' ' + result.snippet).toLowerCase()
+      
+      // Try to extract date from snippet
+      if (!result.published_date) {
+        const dateMatch = result.snippet.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b|\b\d{1,2}\/\d{1,2}\/\d{4}\b/)
+        if (dateMatch) {
+          try {
+            result.published_date = new Date(dateMatch[0]).toISOString()
+          } catch (e) {
+            console.log('[Research Search] Failed to parse date:', dateMatch[0])
+          }
+        }
+      }
       
       if (text.includes('funding') || text.includes('investment') || text.includes('raise')) {
         tags.push('funding')

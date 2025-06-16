@@ -177,8 +177,8 @@ Format the response as a clear list of findings.`,
     console.log(`[Research Search] Found ${annotations.length} URL citations`)
     console.log(`[Research Search] Raw text length: ${rawText.length}`)
     
-    // Log first 500 chars of text to see format
-    console.log('[Research Search] Text preview:', rawText.substring(0, 500))
+    // Log first 1000 chars of text to see format
+    console.log('[Research Search] Text preview:', rawText.substring(0, 1000))
 
     // If no text was extracted, return empty results
     if (!rawText) {
@@ -200,7 +200,6 @@ Format the response as a clear list of findings.`,
     const lines = rawText.split('\n')
     let currentResult: any = null
     let currentSection = ''
-    let inBulletPoint = false
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
@@ -208,61 +207,98 @@ Format the response as a clear list of findings.`,
       
       // Skip empty lines
       if (!trimmedLine) {
-        inBulletPoint = false
         continue
       }
       
-      // Check if this is a section header (marked with **)
+      // Check if this is a numbered section header (e.g., **1. Recent Venture Capital Investments**)
+      const numberedSectionMatch = trimmedLine.match(/^\*\*\d+\.\s+(.+?)\*\*$/)
+      if (numberedSectionMatch) {
+        currentSection = numberedSectionMatch[1]
+        continue
+      }
+      
+      // Check if this is a regular section header (marked with **)
       if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
         currentSection = trimmedLine.replace(/\*\*/g, '')
-        inBulletPoint = false
         continue
       }
       
-      // Check if this is a bullet point
-      if (trimmedLine.startsWith('- **') || trimmedLine.startsWith('- ')) {
+      // Check if this is a bullet point with title
+      if (trimmedLine.startsWith('- **')) {
         // Save previous result if exists
-        if (currentResult && currentResult.snippet) {
+        if (currentResult) {
           searchResults.push(currentResult)
         }
         
         // Extract the title from the bullet point
-        let title = ''
-        let remainingText = ''
-        
-        if (trimmedLine.startsWith('- **')) {
-          // Format: - **Title**: description
-          const match = trimmedLine.match(/^- \*\*(.+?)\*\*:?\s*(.*)/)
-          if (match) {
-            title = match[1]
-            remainingText = match[2]
+        // Format: - **Title**
+        const match = trimmedLine.match(/^- \*\*(.+?)\*\*/)
+        if (match) {
+          currentResult = {
+            title: match[1],
+            snippet: '',
+            source: currentSection,
+            url: null,
+            published_date: null,
+            tags: []
+          }
+        }
+      } 
+      // Also check for list items that start with just a dash
+      else if (trimmedLine.startsWith('- ') && trimmedLine.length > 2) {
+        // Check if this looks like metadata (Source:, Date:, Summary:)
+        if (trimmedLine.match(/^- \*(Source|Date|Summary):\*/)) {
+          // This is metadata for the current result
+          if (currentResult) {
+            const metaMatch = trimmedLine.match(/^- \*(Source|Date|Summary):\*\s*(.+)/)
+            if (metaMatch) {
+              const [, field, value] = metaMatch
+              if (field === 'Source' && !currentResult.source) {
+                currentResult.source = value
+              } else if (field === 'Date') {
+                // Try to parse the date
+                try {
+                  currentResult.published_date = new Date(value).toISOString()
+                } catch (e) {
+                  // If parsing fails, store as is
+                  currentResult.snippet += (currentResult.snippet ? ' ' : '') + trimmedLine
+                }
+              } else if (field === 'Summary') {
+                currentResult.snippet = value
+              }
+            }
+          }
+        } else if (trimmedLine.includes('[') && trimmedLine.includes(']') && trimmedLine.includes('(')) {
+          // This line contains a markdown link - likely the last line of an item
+          if (currentResult) {
+            currentResult.snippet += (currentResult.snippet ? ' ' : '') + trimmedLine.substring(2)
           }
         } else {
-          // Format: - Title or description
-          title = trimmedLine.substring(2).trim()
-          // Check if the next line continues the description
-          if (i + 1 < lines.length && !lines[i + 1].trim().startsWith('-') && !lines[i + 1].trim().startsWith('**')) {
-            remainingText = lines[i + 1].trim()
+          // This might be a standalone list item at the end
+          if (!currentResult || currentResult.snippet) {
+            // Save previous result and start new one
+            if (currentResult) {
+              searchResults.push(currentResult)
+            }
+            currentResult = {
+              title: trimmedLine.substring(2),
+              snippet: '',
+              source: currentSection,
+              url: null,
+              published_date: null,
+              tags: []
+            }
           }
         }
-        
-        currentResult = {
-          title: title,
-          snippet: remainingText,
-          source: currentSection,
-          url: null,
-          published_date: null,
-          tags: []
-        }
-        inBulletPoint = true
-      } else if (inBulletPoint && currentResult && !trimmedLine.startsWith('**')) {
-        // This is a continuation of the current bullet point
-        currentResult.snippet += ' ' + trimmedLine
+      }
+      // If we have a current result and this is not a new item, add to snippet
+      else if (currentResult && !trimmedLine.startsWith('**')) {
+        currentResult.snippet += (currentResult.snippet ? ' ' : '') + trimmedLine
       }
     }
     
     // Don't forget the last result
-    if (currentResult && currentResult.snippet) {
+    if (currentResult) {
       searchResults.push(currentResult)
     }
 

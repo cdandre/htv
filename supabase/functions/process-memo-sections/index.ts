@@ -147,15 +147,14 @@ serve(async (req) => {
       // Add table of contents
       fullContent += `## Table of Contents\n\n`
       finalSections?.forEach((s, index) => {
-        fullContent += `${index + 1}. [${getSectionTitle(s.section_type)}](#${s.section_type.replace(/_/g, '-')})\n`
+        fullContent += `${index + 1}. ${getSectionTitle(s.section_type)}\n`
       })
       fullContent += `\n---\n\n`
       
       // Process each section
       const processedSections = finalSections?.map(s => {
-        // Add section title with proper formatting and anchor
-        const sectionId = s.section_type.replace(/_/g, '-')
-        let sectionText = `<a id="${sectionId}"></a>\n\n## ${getSectionTitle(s.section_type)}\n\n`
+        // Add section title with proper formatting
+        let sectionText = `## ${getSectionTitle(s.section_type)}\n\n`
         
         // Process the content to ensure proper formatting
         let content = s.content || ''

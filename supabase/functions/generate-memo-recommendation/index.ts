@@ -14,15 +14,25 @@ Generate ONLY the Recommendation section. Provide a clear, actionable recommenda
 5. Timeline considerations
 
 Be decisive and specific.`,
-  userPromptTemplate: ({ dealData, analysisData }) => `Generate the Recommendation section for ${dealData.company.name}.
+  userPromptTemplate: ({ dealData, analysisData }) => {
+    const analysis = analysisData.result || {}
+    const scores = analysis.scores || {}
+    const dealDetails = analysis.deal_details || {}
+    const avgScore = (scores.team + scores.market + scores.product + scores.thesis_fit) / 4 || 0
+    
+    return `Generate the Recommendation section for ${dealData.company.name}.
 
 Deal Summary:
-- Stage: ${dealData.stage}
-- Requested Amount: $${dealData.funding_amount?.toLocaleString() || 'TBD'}
-- Valuation: $${dealData.valuation?.toLocaleString() || 'TBD'}
-- HTV Allocation: $${dealData.check_size_max?.toLocaleString() || 'TBD'}
+- Stage: ${dealDetails.stage || dealData.stage || 'TBD'}
+- Requested Amount: $${dealDetails.round_size?.toLocaleString() || 'TBD'}
+- Valuation: $${dealDetails.valuation?.toLocaleString() || 'TBD'}
+- HTV Allocation: $${dealDetails.check_size_min && dealDetails.check_size_max ? 
+    `$${dealDetails.check_size_min.toLocaleString()} - $${dealDetails.check_size_max.toLocaleString()}` : 
+    'TBD'}
 
-Overall Score: ${analysisData.scores?.overall || 'N/A'}/10
+Average Score: ${avgScore.toFixed(1)}/10
+Initial Recommendation: ${analysis.investment_recommendation?.decision || 'Pending'}`
+  }
 
 Provide:
 1. Clear investment recommendation with rationale

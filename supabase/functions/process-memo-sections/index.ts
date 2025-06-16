@@ -71,7 +71,7 @@ serve(async (req) => {
     }
 
     // Process sections with controlled concurrency and retry logic
-    const MAX_CONCURRENT = 2 // Process 2 sections at a time to avoid rate limits
+    const MAX_CONCURRENT = 3 // Process 3 sections at a time (increased from 2)
     const MAX_RETRIES = 3
     const RETRY_DELAY = 5000 // 5 seconds
     
@@ -82,6 +82,8 @@ serve(async (req) => {
         console.error(`No function found for section type: ${section.section_type}`)
         return false
       }
+
+      console.log(`Starting generation of ${section.section_type} (attempt ${retryCount + 1})...`)
 
       try {
         const response = await fetch(`${supabaseUrl}/functions/v1/${functionName}`, {
@@ -150,10 +152,18 @@ serve(async (req) => {
     
     // Process sections with proper concurrency control
     const pendingSections = sections.filter(s => s.status === 'pending')
+    console.log(`Found ${pendingSections.length} pending sections to process:`, 
+      pendingSections.map(s => ({ type: s.section_type, order: s.section_order }))
+    )
+    
     const results = []
     
     for (let i = 0; i < pendingSections.length; i += MAX_CONCURRENT) {
       const batch = pendingSections.slice(i, i + MAX_CONCURRENT)
+      console.log(`Processing batch ${Math.floor(i / MAX_CONCURRENT) + 1}:`, 
+        batch.map(s => s.section_type)
+      )
+      
       const batchPromises = batch.map(section => processSection(section))
       
       const batchResults = await Promise.allSettled(batchPromises)
@@ -161,6 +171,7 @@ serve(async (req) => {
       
       // Small delay between batches to avoid rate limits
       if (i + MAX_CONCURRENT < pendingSections.length) {
+        console.log('Waiting 2 seconds before next batch...')
         await new Promise(resolve => setTimeout(resolve, 2000))
       }
     }
@@ -169,6 +180,25 @@ serve(async (req) => {
     const failedCount = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value)).length
     if (failedCount > 0) {
       console.error(`${failedCount} sections failed to generate`)
+    }
+    
+    // Double-check for any sections still pending (shouldn't happen but just in case)
+    const { data: finalCheck } = await supabaseService
+      .from('investment_memo_sections')
+      .select('section_type, status')
+      .eq('memo_id', memoId)
+      .eq('status', 'pending')
+    
+    if (finalCheck && finalCheck.length > 0) {
+      console.error(`WARNING: ${finalCheck.length} sections still pending after processing:`, 
+        finalCheck.map(s => s.section_type)
+      )
+      
+      // Try to process them one more time
+      for (const section of finalCheck) {
+        console.log(`Attempting final retry for stuck section: ${section.section_type}`)
+        await processSection(section)
+      }
     }
 
     // Check if all sections are complete and update memo status

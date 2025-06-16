@@ -207,9 +207,11 @@ Location: ${deal.company.location || 'Unknown'}
 
 ${uploadedFiles.length > 0 ? `I have uploaded ${uploadedFiles.length} document(s) for your analysis. Please analyze them thoroughly.` : 'No documents were provided.'}
 
-Please analyze all provided information and documents thoroughly. Extract specific details from the documents, particularly from pitch decks and investment memos.
+IMPORTANT: You MUST use the file_search tool to analyze the uploaded documents. Search for company information, funding details, team information, and market data within the documents.
 
-Provide a comprehensive investment analysis as a JSON object with the following structure. For company_details and deal_details, extract actual values from the documents - do not make up information:`
+Please analyze all provided information and documents thoroughly. Extract specific details from the documents, particularly from pitch decks and investment memos. If you cannot find specific information in the documents, you may use null for that field, but you MUST provide scores between 1-10 based on your analysis.
+
+Provide a comprehensive investment analysis as a JSON object with the following structure. For company_details and deal_details, extract actual values from the documents - do not use null if the information exists in the documents:`
     
     // Add the JSON structure to the prompt
     analysisPrompt += `
@@ -326,6 +328,17 @@ Provide a comprehensive investment analysis as a JSON object with the following 
         // The response has multiple outputs - file_search_call and message
         // We need the message output which contains the analysis
         if (response.output && Array.isArray(response.output)) {
+          // Log file_search activity
+          const fileSearchOutput = response.output.find(o => o.type === 'file_search_call')
+          if (fileSearchOutput) {
+            console.log('File search performed:', {
+              status: fileSearchOutput.status,
+              queries: fileSearchOutput.queries?.length || 0
+            })
+          } else {
+            console.warn('No file_search_call found in response - documents may not have been analyzed')
+          }
+          
           for (const output of response.output) {
             if (output.type === 'message' && output.content && Array.isArray(output.content)) {
               for (const content of output.content) {
@@ -379,11 +392,20 @@ Provide a comprehensive investment analysis as a JSON object with the following 
     }
 
     // Update deal scores and details
+    // Ensure scores are valid (between 1-10, default to 5 if invalid)
     const dealUpdateData: any = {
-      thesis_fit_score: analysisData.scores.thesis_fit,
-      market_score: analysisData.scores.market,
-      team_score: analysisData.scores.team,
-      product_score: analysisData.scores.product,
+      thesis_fit_score: (analysisData.scores.thesis_fit >= 1 && analysisData.scores.thesis_fit <= 10) 
+        ? analysisData.scores.thesis_fit 
+        : 5,
+      market_score: (analysisData.scores.market >= 1 && analysisData.scores.market <= 10) 
+        ? analysisData.scores.market 
+        : 5,
+      team_score: (analysisData.scores.team >= 1 && analysisData.scores.team <= 10) 
+        ? analysisData.scores.team 
+        : 5,
+      product_score: (analysisData.scores.product >= 1 && analysisData.scores.product <= 10) 
+        ? analysisData.scores.product 
+        : 5,
     }
     
     // Add deal details if extracted

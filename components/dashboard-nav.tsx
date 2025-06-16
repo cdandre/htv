@@ -33,7 +33,7 @@ export default function DashboardNav({ user }: DashboardNavProps) {
     { name: 'Deals', href: '/dashboard/deals', icon: Briefcase },
     { name: 'Memos', href: '/dashboard/memos', icon: FileText },
     { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-    { name: 'Knowledge', href: '/dashboard/knowledge', icon: BookOpen },
+    { name: 'Research', href: '/dashboard/research', icon: BookOpen },
   ]
 
   return (

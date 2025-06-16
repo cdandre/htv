@@ -677,12 +677,21 @@ export default function DealDetail({ deal }: DealDetailProps) {
                       <span className="text-muted-foreground">Website</span>
                     </div>
                     <a 
-                      href={deal.company.website} 
+                      href={deal.company.website.startsWith('http') ? deal.company.website : `https://${deal.company.website}`} 
                       target="_blank" 
                       rel="noopener noreferrer" 
                       className="text-sm text-primary hover:underline flex items-center"
                     >
-                      {new URL(deal.company.website).hostname}
+                      {(() => {
+                        try {
+                          const url = deal.company.website.startsWith('http') 
+                            ? deal.company.website 
+                            : `https://${deal.company.website}`
+                          return new URL(url).hostname
+                        } catch {
+                          return deal.company.website
+                        }
+                      })()}
                       <ArrowUpRight className="w-3 h-3 ml-1" />
                     </a>
                   </div>

@@ -419,7 +419,12 @@ Provide a comprehensive investment analysis as a JSON object with the following 
         companyUpdateData.name = analysisData.company_details.name
       }
       if (analysisData.company_details.website) {
-        companyUpdateData.website = analysisData.company_details.website
+        // Ensure website has a protocol
+        let website = analysisData.company_details.website.trim()
+        if (website && !website.startsWith('http://') && !website.startsWith('https://')) {
+          website = `https://${website}`
+        }
+        companyUpdateData.website = website
       }
       if (analysisData.company_details.location) {
         companyUpdateData.location = analysisData.company_details.location

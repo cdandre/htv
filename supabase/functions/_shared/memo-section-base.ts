@@ -107,9 +107,28 @@ export async function generateMemoSection(
     }
 
     const data = await response.json()
-    let sectionContent = data.output || ''
-
-    // The Responses API returns the content with citations already embedded
+    
+    // Extract the actual text content from the Responses API format
+    let sectionContent = ''
+    if (typeof data.output === 'string') {
+      sectionContent = data.output
+    } else if (Array.isArray(data.output)) {
+      // Handle array format - extract text from message content
+      const messages = data.output.filter((item: any) => item.type === 'message' && item.status === 'completed')
+      for (const msg of messages) {
+        if (msg.content && Array.isArray(msg.content)) {
+          for (const contentItem of msg.content) {
+            if (contentItem.type === 'output_text' && contentItem.text) {
+              sectionContent += contentItem.text + '\n\n'
+            }
+          }
+        }
+      }
+    }
+    
+    // Clean up any trailing newlines
+    sectionContent = sectionContent.trim()
+    
     console.log(`Generated ${config.sectionType} section with ${sectionContent.length} characters`)
 
     // Update section with content

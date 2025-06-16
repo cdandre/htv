@@ -2,9 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import DashboardMetrics from '@/components/dashboard-metrics'
 import PipelineChart from '@/components/pipeline-chart'
 import RecentActivity from '@/components/recent-activity'
-import { Button } from '@/components/ui/button'
-import { Plus, Upload } from 'lucide-react'
-import Link from 'next/link'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -26,32 +23,9 @@ export default async function DashboardPage() {
         <h1 className="heading-1 text-black dark:text-white mb-4">
           Dashboard
         </h1>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <p className="body-large text-gray-600 dark:text-gray-400 mb-6 sm:mb-0">
-            Track your portfolio performance and deal pipeline.
-          </p>
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard/upload">
-              <Button 
-                variant="outline" 
-                size="default"
-                className="btn-secondary border-gray-300 dark:border-gray-700"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Deck
-              </Button>
-            </Link>
-            <Link href="/dashboard/deals/new">
-              <Button 
-                size="default"
-                className="btn-primary"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                New Deal
-              </Button>
-            </Link>
-          </div>
-        </div>
+        <p className="body-large text-gray-600 dark:text-gray-400">
+          Track your portfolio performance and deal pipeline.
+        </p>
         
         {/* Key Stats - Minimal */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-8">

@@ -13,18 +13,7 @@ Generate ONLY the Team & Execution section. Focus on:
 4. Organizational strengths
 5. Hiring plans and gaps
 
-Include inline citations [N] when referencing specific information.`,
-  userPromptTemplate: ({ dealData, analysisData }) => {
-    const analysis = analysisData.result || {}
-    const teamAssessment = analysis.team_assessment || {}
-    
-    return `Generate the Team & Execution section.
-
-INITIAL TEAM ASSESSMENT:
-- Key Strengths: ${teamAssessment.strengths?.join(', ') || 'See analysis'}
-- Key Concerns: ${teamAssessment.concerns?.join(', ') || 'None identified'}
-- Background Verification: ${teamAssessment.background_verification || 'See documents'}`
-  }
+Include inline citations [N] when referencing specific information.
 
 Evaluate:
 1. Founder profiles and relevant experience
@@ -54,6 +43,17 @@ IMPORTANT:
 - Distinguish: "Company materials show..." vs "Public profiles indicate..."
 - Validate domain expertise claims through web research
 - Include specific examples and cite all sources with [N] references`,
+  userPromptTemplate: ({ dealData, analysisData }) => {
+    const analysis = analysisData.result || {}
+    const teamAssessment = analysis.team_assessment || {}
+    
+    return `Generate the Team & Execution section.
+
+INITIAL TEAM ASSESSMENT:
+- Key Strengths: ${teamAssessment.strengths?.join(', ') || 'See analysis'}
+- Key Concerns: ${teamAssessment.concerns?.join(', ') || 'None identified'}
+- Background Verification: ${teamAssessment.background_verification || 'See documents'}`
+  },
   maxTokens: 2000
 }
 

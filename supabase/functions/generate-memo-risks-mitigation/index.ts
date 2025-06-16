@@ -13,21 +13,7 @@ Generate ONLY the Risks & Mitigation section. Provide a balanced assessment of:
 4. Financial and business model risks
 5. Regulatory and compliance risks
 
-Include inline citations [N] when referencing specific information.`,
-  userPromptTemplate: ({ dealData, analysisData }) => {
-    const analysis = analysisData.result || {}
-    const risks = analysis.risks || []
-    
-    return `Generate the Risks & Mitigation section.
-
-INITIAL RISK ASSESSMENT:
-${risks.map((risk, index) => `
-Risk ${index + 1}:
-- Category: ${risk.category}
-- Description: ${risk.description}
-- Mitigation: ${risk.mitigation}
-`).join('\n') || 'No specific risks identified in initial analysis'}`
-  }
+Include inline citations [N] when referencing specific information.
 
 Provide honest assessment of:
 1. Primary market and competitive risks
@@ -60,6 +46,20 @@ IMPORTANT:
 - For each risk, research and suggest concrete mitigation strategies
 - Be transparent: "Company identifies..." vs "Industry research shows..."
 - Include specific examples and cite all sources with [N] references`,
+  userPromptTemplate: ({ dealData, analysisData }) => {
+    const analysis = analysisData.result || {}
+    const risks = analysis.risks || []
+    
+    return `Generate the Risks & Mitigation section.
+
+INITIAL RISK ASSESSMENT:
+${risks.map((risk, index) => `
+Risk ${index + 1}:
+- Category: ${risk.category}
+- Description: ${risk.description}
+- Mitigation: ${risk.mitigation}
+`).join('\n') || 'No specific risks identified in initial analysis'}`
+  },
   maxTokens: 2000
 }
 

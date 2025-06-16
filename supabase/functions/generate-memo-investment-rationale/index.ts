@@ -33,7 +33,18 @@ Articulate:
 4. Key milestones and value inflection points
 5. HTV's unique ability to add value
 
-IMPORTANT: The company's pitch deck and supporting documents are already available in your vector store. Use file_search to extract specific evidence supporting the investment rationale from these uploaded documents. Do NOT ask for documents to be uploaded - they are already available.`,
+IMPORTANT: 
+- The company's pitch deck and supporting documents are already available in your vector store
+- Use file_search FIRST to extract evidence supporting investment rationale from documents
+- Base return projections on actual metrics from documents, not assumptions
+- If exit scenarios or comparables are in the pitch deck, use those figures
+- NEVER fabricate or guess:
+  * Return multiples or exit valuations
+  * Timeline to exit or liquidity
+  * Comparable company valuations
+  * Market share projections
+- If specific projections aren't in documents, state "Company has not provided exit projections"
+- Do NOT ask for documents to be uploaded - they are already available`,
   maxTokens: 2000
 }
 

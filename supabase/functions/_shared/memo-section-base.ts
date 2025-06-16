@@ -86,8 +86,36 @@ export async function generateMemoSection(
       search_context_size: 'medium'
     })
 
-    // Generate section content
-    const userPrompt = config.systemPrompt + '\n\n' + config.userPromptTemplate({ dealData, analysisData })
+    // Generate section content with enhanced instructions for document precedence
+    const documentPrecedenceInstructions = `
+CRITICAL INSTRUCTIONS FOR DATA SOURCING AND ACCURACY:
+
+1. DOCUMENT PRECEDENCE:
+   - ALWAYS prioritize information from uploaded documents (file_search) as the primary source of truth
+   - Uploaded documents include pitch decks, financials, and company-provided materials
+   - These documents contain the most accurate and up-to-date information about the company
+   - Web search results should ONLY be used for supplementary market context, industry trends, and competitive landscape
+
+2. DATA ACCURACY - NEVER GUESS OR FABRICATE:
+   - If specific data is not found in documents or web search, explicitly state it is "not disclosed", "not available", or "not provided in documents"
+   - NEVER make assumptions, estimates, or educated guesses about:
+     * Financial metrics (revenue, burn rate, runway, valuation)
+     * User/customer numbers or growth rates
+     * Specific dates, names, or partnerships
+     * Technical specifications or product features
+   - Always indicate the source of information with inline citations [N]
+
+3. CONFLICT RESOLUTION:
+   - In case of conflicting information between documents and web search, ALWAYS use the data from uploaded documents
+   - If web search provides different information than documents, trust the documents
+   - Only mention discrepancies if they are significant and warrant investor attention
+
+4. TRANSPARENCY:
+   - Be explicit about what information comes from documents vs. web research
+   - Use phrases like "According to the pitch deck...", "The company's documents show...", "Web research indicates..."
+   - If relying on web search for context, clearly state "Based on industry research..." or "Market analysis suggests..."`
+    
+    const userPrompt = documentPrecedenceInstructions + '\n\n' + config.systemPrompt + '\n\n' + config.userPromptTemplate({ dealData, analysisData })
     
     console.log(`Generating ${config.sectionType} with tools:`, JSON.stringify(tools, null, 2))
     console.log(`Vector store ID: ${vectorStoreId || 'None'}`)

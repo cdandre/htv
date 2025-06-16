@@ -28,7 +28,16 @@ Provide honest assessment of:
 
 For each risk, suggest potential mitigation strategies.
 
-IMPORTANT: Be balanced but honest about risks. The company's pitch deck and supporting documents are already available in your vector store. Use file_search to extract risk mitigation strategies and challenges acknowledged by the company from these uploaded documents. Additionally, use web_search_preview to research industry-specific risks. Do NOT ask for documents to be uploaded - they are already available.`,
+IMPORTANT: 
+- Be balanced but honest about risks
+- The company's pitch deck and supporting documents are already available in your vector store
+- Use file_search FIRST to identify risks and mitigation strategies acknowledged in documents
+- Company-acknowledged risks from documents should be presented first and given priority
+- Use web_search_preview for industry-wide risks and market dynamics only
+- NEVER fabricate specific risks about the company that aren't supported by evidence
+- If documents don't mention certain risks, you may note general industry risks but clarify the source
+- Be clear: "The pitch deck identifies..." vs "Industry analysis suggests..."
+- Do NOT ask for documents to be uploaded - they are already available`,
   maxTokens: 2000
 }
 

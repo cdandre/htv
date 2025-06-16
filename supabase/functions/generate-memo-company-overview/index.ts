@@ -35,10 +35,12 @@ Provide:
 
 IMPORTANT: 
 - The company's pitch deck and supporting documents are already available in your vector store
-- ALWAYS use file_search to extract specific information from these uploaded documents
+- ALWAYS use file_search FIRST to extract specific information from these uploaded documents
 - Include actual metrics, traction data, and growth numbers from the pitch deck with citations
 - Be specific about the company's correct domain and naming (e.g., adbuy.ai not adbuy.com)
 - Look for and cite: revenue figures, user numbers, growth rates, customer names, partnership details
+- If specific metrics are not found in documents, state "not disclosed in provided documents" - NEVER guess or estimate
+- Trust document data over any conflicting web search results
 - Do NOT ask for documents to be uploaded - they are already available`,
   maxTokens: 2500
 }

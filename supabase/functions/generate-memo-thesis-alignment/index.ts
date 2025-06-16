@@ -34,7 +34,14 @@ Explain:
 3. Why this is a compelling opportunity within our thesis
 4. Market timing considerations
 
-IMPORTANT: The company's pitch deck and supporting documents are already available in your vector store. Use file_search to extract specific evidence about how the company aligns with HTV's thesis from these uploaded documents. Do NOT ask for documents to be uploaded - they are already available.`,
+IMPORTANT: 
+- The company's pitch deck and supporting documents are already available in your vector store
+- Use file_search FIRST to understand the company's actual business model and market focus
+- Base thesis alignment on what the company actually does per their documents, not assumptions
+- NEVER force-fit a company into HTV's thesis if documents show otherwise
+- If the company's focus isn't clear from documents, state this rather than guessing
+- Be honest if thesis alignment is weak or unclear based on available information
+- Do NOT ask for documents to be uploaded - they are already available`,
   maxTokens: 2000
 }
 

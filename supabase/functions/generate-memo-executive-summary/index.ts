@@ -30,9 +30,12 @@ Focus on:
 
 IMPORTANT: 
 - The company's pitch deck and supporting documents are already available in your vector store
-- ALWAYS use file_search to reference specific information from these uploaded documents
+- ALWAYS use file_search FIRST to extract key information from uploaded documents
+- All key metrics (revenue, users, growth) must come from documents - NEVER estimate
 - When referencing the company, ensure you use the correct domain (e.g., adbuy.ai not adbuy.com)
-- Include specific metrics and data points from the pitch deck with citations
+- If critical metrics are not in documents, state "not disclosed" rather than guessing
+- Document data takes absolute precedence over any web search findings
+- Be explicit: "According to the pitch deck..." for document-sourced information
 - Do NOT ask for documents to be uploaded - they are already available`,
   maxTokens: 1500
 }

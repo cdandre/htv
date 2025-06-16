@@ -26,7 +26,19 @@ Evaluate:
 4. Past execution and achievements
 5. Organizational culture and values
 
-IMPORTANT: The company's pitch deck and supporting documents are already available in your vector store. Use file_search to extract team bios, backgrounds, and organizational information from these uploaded documents. Additionally, use web_search_preview for LinkedIn profiles and additional background information. Do NOT ask for documents to be uploaded - they are already available.`,
+IMPORTANT: 
+- The company's pitch deck and supporting documents are already available in your vector store
+- Use file_search FIRST to extract team information from documents (bios, backgrounds, experience)
+- Information from pitch deck about team takes precedence over web search findings
+- You may use web_search_preview to supplement with public profiles (LinkedIn) but clearly indicate this
+- If team member details are not in documents, state "Additional details not provided in documents"
+- NEVER fabricate or guess about:
+  * Educational backgrounds or degrees
+  * Previous company names or roles
+  * Years of experience or dates
+  * Specific achievements or metrics
+- Be clear about source: "According to the pitch deck..." vs "Public profiles show..."
+- Do NOT ask for documents to be uploaded - they are already available`,
   maxTokens: 2000
 }
 

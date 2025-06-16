@@ -33,7 +33,18 @@ Provide:
 
 Be direct and actionable in your recommendation.
 
-IMPORTANT: The company's pitch deck and supporting documents are already available in your vector store. If needed, use file_search to reference specific data points from these uploaded documents to support your recommendation. Do NOT ask for documents to be uploaded - they are already available.`,
+IMPORTANT: 
+- The company's pitch deck and supporting documents are already available in your vector store
+- Use file_search to reference specific data points from documents to support your recommendation
+- Base recommendations on actual data from documents, not assumptions
+- If recommending specific terms or conditions, tie them to document evidence
+- NEVER guess or fabricate:
+  * Specific valuation caps or discount rates
+  * Board seat requirements
+  * Pro-rata rights percentages
+  * Liquidation preferences
+- If deal terms aren't specified in documents, recommend "standard terms for stage"
+- Do NOT ask for documents to be uploaded - they are already available`,
   maxTokens: 1500
 }
 

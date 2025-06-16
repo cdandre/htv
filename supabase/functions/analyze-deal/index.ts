@@ -196,13 +196,8 @@ serve(async (req) => {
       }
     }
 
-    // Build the input for Responses API
-    const inputContent = []
-    
-    // Add text prompt
-    inputContent.push({
-      type: 'input_text',
-      text: `Analyze this investment opportunity:
+    // Build the prompt for Responses API
+    let analysisPrompt = `Analyze this investment opportunity:
 
 Company: ${deal.company.name}
 Deal: ${deal.title}
@@ -210,23 +205,14 @@ Website: ${deal.company.website || 'Not provided'}
 Sector: ${deal.sector || 'Unknown'}
 Location: ${deal.company.location || 'Unknown'}
 
-${uploadedFiles.length > 0 ? `I have uploaded ${uploadedFiles.length} document(s) for your analysis.` : 'No documents were provided.'}
+${uploadedFiles.length > 0 ? `I have uploaded ${uploadedFiles.length} document(s) for your analysis. Please analyze them thoroughly.` : 'No documents were provided.'}
 
 Please analyze all provided information and documents thoroughly. Extract specific details from the documents, particularly from pitch decks and investment memos.
 
 Provide a comprehensive investment analysis as a JSON object with the following structure. For company_details and deal_details, extract actual values from the documents - do not make up information:`
-    })
     
-    // Add uploaded files to the input
-    for (const file of uploadedFiles) {
-      inputContent.push({
-        type: 'input_file',
-        file_id: file.fileId
-      })
-    }
-    
-    // Add the JSON structure to the text prompt
-    inputContent[0].text += `
+    // Add the JSON structure to the prompt
+    analysisPrompt += `
 {
   "executive_summary": "High-level overview of the investment opportunity",
   "company_details": {
@@ -295,7 +281,7 @@ Provide a comprehensive investment analysis as a JSON object with the following 
       // Build the request body for Responses API with file_search
       const requestBody: any = {
         model: 'gpt-4.1',
-        input: inputContent,
+        input: analysisPrompt,
         text: {
           format: {
             type: 'json_object'
@@ -309,9 +295,7 @@ Provide a comprehensive investment analysis as a JSON object with the following 
         requestBody.tools = [
           {
             type: 'file_search',
-            file_search: {
-              vector_store_ids: [vectorStoreId]
-            }
+            vector_store_ids: [vectorStoreId]
           }
         ]
       }

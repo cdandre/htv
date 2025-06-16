@@ -234,6 +234,11 @@ serve(async (req) => {
         .select('*')
         .eq('memo_id', memoId)
         .order('section_order')
+      
+      console.log(`Found ${finalSections?.length || 0} sections for memo ${memoId}`)
+      finalSections?.forEach(s => {
+        console.log(`Section ${s.section_type}: ${s.content?.length || 0} characters`)
+      })
 
       // Add header to the memo
       let fullContent = `# Investment Memo - ${memoData?.deal?.company?.name || 'Company'}\n\n`
@@ -255,12 +260,17 @@ serve(async (req) => {
       fullContent += `\n---\n\n`
       
       // Process each section
+      console.log('Processing sections for final content...')
       const processedSections = finalSections?.map(s => {
         // Add section title with proper formatting
         let sectionText = `## ${getSectionTitle(s.section_type)}\n\n`
         
         // Process the content to ensure proper formatting
         let content = s.content || ''
+        
+        if (!content) {
+          console.warn(`WARNING: Section ${s.section_type} has no content!`)
+        }
         
         // Remove duplicate section titles if they exist at the start
         const titleRegex = new RegExp(`^${getSectionTitle(s.section_type)}\\s*\\n+`, 'i')
@@ -342,7 +352,14 @@ serve(async (req) => {
       finalMemoContent = finalMemoContent.replace(/<sup>\[(\d+)\]<\/sup>/g, '^[$1]^')
       finalMemoContent = finalMemoContent.replace(/<sup>(\d+)<\/sup>/g, '^$1^')
 
-      await supabaseService
+      console.log(`Updating memo ${memoId} with ${finalMemoContent.length} characters of content`)
+      
+      if (!finalMemoContent || finalMemoContent.length === 0) {
+        console.error('ERROR: Final memo content is empty!')
+        throw new Error('Failed to generate memo content - content is empty')
+      }
+      
+      const { error: memoUpdateError } = await supabaseService
         .from('investment_memos')
         .update({
           content: finalMemoContent,
@@ -350,6 +367,11 @@ serve(async (req) => {
           sections_completed: completedCount
         })
         .eq('id', memoId)
+      
+      if (memoUpdateError) {
+        console.error('Error updating final memo content:', memoUpdateError)
+        throw memoUpdateError
+      }
     }
 
     return new Response(

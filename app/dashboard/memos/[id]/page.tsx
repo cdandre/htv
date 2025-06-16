@@ -142,9 +142,23 @@ export default function MemoDetailPage({
           <MemoStyles />
           <Card className="shadow-lg">
             <CardContent className="p-8 md:p-12">
-              <div className="memo-content">
-                <ReactMarkdown>{memo.content}</ReactMarkdown>
-              </div>
+              {memo.content ? (
+                <div className="memo-content">
+                  <ReactMarkdown>{memo.content}</ReactMarkdown>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground mb-4">
+                    The memo generation completed but no content was found.
+                  </p>
+                  <Button 
+                    variant="outline"
+                    onClick={() => router.push(`/dashboard/deals/${memo.deal.id}`)}
+                  >
+                    Back to Deal
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </>

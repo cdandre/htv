@@ -11,21 +11,7 @@ Generate ONLY the Executive Summary section of an investment memo. This should b
 2. Key investment highlights and thesis alignment
 3. Primary recommendation with deal terms
 
-Use the provided deal data and analysis. Include inline citations [N] when referencing specific information from documents or web searches.`,
-  userPromptTemplate: ({ dealData, analysisData }) => {
-    const analysis = analysisData.result || {}
-    
-    return `Generate the Executive Summary section for ${dealData.company.name}.
-
-CONTEXT FROM INITIAL ANALYSIS:
-${analysis.executive_summary || 'Not available'}
-
-KEY INSIGHTS FROM INITIAL ASSESSMENT:
-${analysis.investment_recommendation ? 
-  `- Recommendation: ${analysis.investment_recommendation.decision}
-- Rationale: ${analysis.investment_recommendation.rationale}` : 
-  '- See full analysis for recommendation'}`
-  }
+Use the provided deal data and analysis. Include inline citations [N] when referencing specific information from documents or web searches.
 
 Focus on:
 - Clear articulation of what the company does
@@ -51,6 +37,20 @@ IMPORTANT:
 - Distinguish: "Company reports..." vs "Market research indicates..."
 - Create a compelling narrative using both sources
 - Include specific data points and cite all sources with [N] references`,
+  userPromptTemplate: ({ dealData, analysisData }) => {
+    const analysis = analysisData.result || {}
+    
+    return `Generate the Executive Summary section for ${dealData.company.name}.
+
+CONTEXT FROM INITIAL ANALYSIS:
+${analysis.executive_summary || 'Not available'}
+
+KEY INSIGHTS FROM INITIAL ASSESSMENT:
+${analysis.investment_recommendation ? 
+  `- Recommendation: ${analysis.investment_recommendation.decision}
+- Rationale: ${analysis.investment_recommendation.rationale}` : 
+  '- See full analysis for recommendation'}`
+  },
   maxTokens: 1500
 }
 

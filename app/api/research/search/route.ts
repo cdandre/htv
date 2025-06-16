@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import OpenAI from 'openai'
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,10 +24,6 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY!,
-    })
-
     // Customize the search prompt based on searchType
     let searchPrompt = query
     if (searchType === 'industry') {
@@ -42,13 +37,19 @@ export async function POST(request: NextRequest) {
     console.log(`[Research Search] Query: "${query}", Type: ${searchType}, Enhanced: "${searchPrompt}"`)
 
     // Use the Responses API with web_search tool
-    const response = await openai.responses.create({
-      model: 'gpt-4.1',
-      tools: [{ 
-        type: 'web_search_preview',
-        search_context_size: 'medium'
-      }],
-      input: `Search for the latest news, articles, and insights about: ${searchPrompt}
+    const response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY!}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4.1',
+        tools: [{ 
+          type: 'web_search_preview',
+          search_context_size: 'medium'
+        }],
+        input: `Search for the latest news, articles, and insights about: ${searchPrompt}
       
 Focus on:
 - Recent venture capital investments and funding rounds
@@ -59,17 +60,26 @@ Focus on:
 
 Return the most relevant and recent results with clear titles, sources, dates, and brief summaries.
 Format the response as a clear list of findings.`,
-      max_output_tokens: 4000,
-      store: true
+        max_output_tokens: 4000,
+        store: true
+      })
     })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error('[Research Search] OpenAI API error:', errorData)
+      throw new Error(errorData.error?.message || 'Failed to search')
+    }
+
+    const data = await response.json()
 
     // Extract the results from the response
     let searchResults: any[] = []
     let rawText = ''
     let annotations: any[] = []
 
-    if (Array.isArray(response.output)) {
-      for (const item of response.output) {
+    if (Array.isArray(data.output)) {
+      for (const item of data.output) {
         if (item.type === 'message' && item.content) {
           for (const content of item.content) {
             if (content.type === 'output_text') {
@@ -79,8 +89,11 @@ Format the response as a clear list of findings.`,
           }
         }
       }
-    } else if (typeof response.output === 'string') {
-      rawText = response.output
+    } else if (typeof data.output === 'string') {
+      rawText = data.output
+    } else if (data.output_text) {
+      // Handle direct output_text format
+      rawText = data.output_text
     }
 
     console.log(`[Research Search] Found ${annotations.length} URL citations`)

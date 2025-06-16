@@ -291,8 +291,8 @@ CRITICAL INSTRUCTIONS FOR COMPREHENSIVE ANALYSIS WITH WEB RESEARCH:
     await supabaseService
       .from('investment_memos')
       .update({
-        sections_completed: completedCount,
-        generation_status: completedCount === 10 ? 'completed' : 'generating'
+        sections_completed: completedCount
+        // Don't update generation_status here - let process-memo-sections handle final status
       })
       .eq('id', memoId)
 

@@ -205,6 +205,10 @@ serve(async (req) => {
       }
     }
 
+    // Add a small delay to ensure all database writes have completed
+    console.log('Waiting 3 seconds to ensure all sections have saved...')
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    
     // Check if all sections are complete and update memo status
     const { data: updatedSections } = await supabaseService
       .from('investment_memo_sections')
